@@ -9,7 +9,7 @@
 class TempleParticleEngine {
   constructor(canvas) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+    this.ctx = canvas.getContext('2d', { alpha: true });
     this.width = 1920;
     this.height = 1080;
     this.canvas.width = this.width;
