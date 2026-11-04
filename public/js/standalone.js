@@ -128,8 +128,6 @@ window.TempleLocal = (function () {
     haloIntensity: 0.35,
     offerings: { lotus: 0, fruit: 0, lamp: 0, dragon: 0 },
     devotees: {},
-    seats: Array(TOTAL_SEATS).fill(null),
-    queue: [],
     recentEvents: [],
     settings: {
       ttsEnabled: true,
@@ -150,9 +148,6 @@ window.TempleLocal = (function () {
         return {
           ...base,
           ...saved,
-          // Ghế & hàng chờ luôn bắt đầu trống mỗi phiên — vào lại phải ghi danh/xếp hàng
-          seats: Array(TOTAL_SEATS).fill(null),
-          queue: [],
           devotees: saved.devotees || {},
           offerings: { ...base.offerings, ...(saved.offerings || {}) },
           recentEvents: saved.recentEvents || [],
@@ -215,50 +210,49 @@ window.TempleLocal = (function () {
     return dev;
   }
 
-  // ── Ghế & hàng chờ ──────────────────────────────────────────────────────────
-  function seatIndexOf(uniqueId, name) {
-    return state.seats.findIndex((s) => s && (s.uniqueId === uniqueId || s.name === name));
+  // ── Ghế & hàng chờ DÙNG CHUNG (TempleNet — sơ đồ realtime giữa các trình duyệt) ──
+  const net = () => window.TempleNet || null;
+  const EMPTY_ROSTER = { seats: Array(TOTAL_SEATS).fill(null), queue: [], people: [], freeSeats: [] };
+  function sharedRoster() {
+    const n = net();
+    return n ? n.roster() : EMPTY_ROSTER;
   }
-  function freeSeatIndexes() {
-    const out = [];
-    for (let i = 0; i < TOTAL_SEATS; i++) if (!state.seats[i]) out.push(i);
-    return out;
-  }
-  function queueIndexOf(uniqueId, name) {
-    return state.queue.findIndex((q) => q.uniqueId === uniqueId || q.name === name);
-  }
-  function occupySeat(idx, dev, isSim) {
-    if (idx < 0 || idx >= TOTAL_SEATS || state.seats[idx]) return null;
-    state.seats[idx] = { name: dev.name, uniqueId: dev.uniqueId, isSim: !!isSim, seatedAt: Date.now() };
-    return pushEventLog({ type: 'seatTaken', seatIdx: idx, user: dev.name, uniqueId: dev.uniqueId, isSim: !!isSim });
-  }
-  // Nhả ghế rồi nhường cho người đầu hàng chờ (nếu có)
-  function vacateSeat(idx) {
-    const occ = state.seats[idx];
-    if (!occ) return null;
-    state.seats[idx] = null;
-    const evt = pushEventLog({ type: 'seatVacated', seatIdx: idx, user: occ.name, uniqueId: occ.uniqueId, isSim: occ.isSim });
-    promoteQueue(idx);
-    return evt;
-  }
-  function promoteQueue(preferredIdx = -1) {
-    if (!state.queue.length) return null;
-    let idx = (preferredIdx >= 0 && !state.seats[preferredIdx]) ? preferredIdx : freeSeatIndexes()[0];
-    if (idx === undefined) return null;
-    const next = state.queue.shift();
-    return occupySeat(idx, next, next.isSim);
+  function mySid() { const n = net(); return n ? n.sid : ''; }
+  function mySeatIdx() {
+    const r = sharedRoster();
+    return r.seats.findIndex((s) => s && s.uniqueId === mySid());
   }
 
   function pushEventLog(evt) {
     if (evt.seatIdx === undefined && evt.type !== 'seatTaken' && evt.type !== 'seatVacated') {
-      evt.seatIdx = seatIndexOf(evt.uniqueId, evt.user);
+      // sự kiện nghi thức luôn là của mình (RPC local) — gắn chiếu + sid hiện tại
+      evt.seatIdx = mySeatIdx();
+      evt.uniqueId = mySid();
     }
-    const entry = { id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, timestamp: new Date().toISOString(), ...evt };
+    const entry = { id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, timestamp: new Date().toISOString(), ts: Date.now(), ...evt };
+    state.recentEvents.unshift(entry);
     if (state.recentEvents.length > 35) state.recentEvents.length = 35;
     return entry;
   }
 
   function getPublicState() {
+    const r = sharedRoster();
+    // bảng công đức = người thật đang trong chùa (kể cả mình), xếp theo công đức phiên
+    const live = r.people
+      .filter((p) => p.name)
+      .map((p) => ({ name: p.name, uniqueId: p.sid, merit: p.merit || 0 }));
+    const known = new Set(live.map((p) => p.name));
+    const merged = [...live];
+    for (const d of getLeaderboard(24)) {
+      if (!known.has(d.name)) merged.push(d);
+    }
+    merged.sort((a, b) => b.merit - a.merit);
+    const board = merged.slice(0, 24).map((d, i) => ({ ...d, rank: i + 1 }));
+    // nhật ký: sự kiện local + nghi thức của người khác
+    const remote = (net() ? net().recentRits : []).map((ev) => ({ ...ev, ts: ev.ts || 0 }));
+    const feed = [...state.recentEvents.map((e) => ({ ...e, ts: e.ts || Date.parse(e.timestamp) || 0 })), ...remote]
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, 15);
     return {
       totalIncense: state.totalIncense,
       totalMerit: state.totalMerit,
@@ -269,11 +263,12 @@ window.TempleLocal = (function () {
       activeIncenseSticks: state.activeIncenseSticks,
       haloIntensity: state.haloIntensity,
       offerings: state.offerings,
-      leaderboard: getLeaderboard(24),
-      seats: state.seats.map((s, i) => (s ? { seatIdx: i, name: s.name, uniqueId: s.uniqueId, isSim: s.isSim } : null)),
-      queue: state.queue.map((q) => ({ name: q.name, uniqueId: q.uniqueId, isSim: q.isSim })),
+      leaderboard: board,
+      seats: r.seats,
+      queue: r.queue.map((q, i) => ({ name: q.name, uniqueId: q.sid, position: i + 1, isSim: false })),
       totalSeats: TOTAL_SEATS,
-      recentEvents: state.recentEvents.slice(0, 15),
+      onlineCount: r.people.length,
+      recentEvents: feed,
       settings: state.settings,
       tiktok: state.tiktok,
       tts: { ready: true, status: 'browser', voice: 'vi-VN' }
@@ -296,6 +291,7 @@ window.TempleLocal = (function () {
       const devotee = recordDevotee(user, uniqueId, avatar, merit, count, 0, wish);
       const ttsText = params.readTts === false ? '' : `Nam mô A Di Đà Phật. Cảm tạ thí chủ ${devotee.name} đã thành tâm thắp ${count} nén hương thơm. ${wish}.`;
       const event = pushEventLog({ type: 'burnIncense', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, count, merit, wish, ttsText, ttsVoice: 'vi-VN' });
+      broadcastRitual(event, devotee);
       saveState();
       return { event, state: getPublicState() };
     },
@@ -309,6 +305,7 @@ window.TempleLocal = (function () {
       state.woodenFishHits += count;
       const devotee = recordDevotee(user, uniqueId, avatar, merit, 0, 0);
       const event = pushEventLog({ type: 'strikeWoodenFish', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, count, merit, ttsText: params.ttsText || '' });
+      broadcastRitual(event, devotee);
       saveState();
       return { event, state: getPublicState() };
     },
@@ -324,6 +321,7 @@ window.TempleLocal = (function () {
       const devotee = recordDevotee(user, uniqueId, avatar, merit, 0, 0, wish);
       const ttsText = params.readTts ? `Thí chủ ${devotee.name} thỉnh Đại Hồng Chung cầu nguyện: ${wish}.` : '';
       const event = pushEventLog({ type: 'ringBell', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, count, merit, wish, ttsText, ttsVoice: 'vi-VN' });
+      broadcastRitual(event, devotee);
       saveState();
       return { event, state: getPublicState() };
     },
@@ -338,6 +336,7 @@ window.TempleLocal = (function () {
       const devotee = recordDevotee(user, uniqueId, avatar, merit, 1, 0, wish);
       const ttsText = params.readTts === false ? '' : `Lời cầu nguyện của thí chủ ${devotee.name}: ${wish}. Nam mô A Di Đà Phật.`;
       const event = pushEventLog({ type: 'sendPrayer', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, wish, merit, ttsText, ttsVoice: 'vi-VN' });
+      broadcastRitual(event, devotee);
       saveState();
       return { event, state: getPublicState() };
     },
@@ -361,6 +360,7 @@ window.TempleLocal = (function () {
       const devotee = recordDevotee(user, uniqueId, avatar, merit, 3, 1, wish);
       const ttsText = params.readTts === false ? '' : `Công đức vô lượng! Cảm tạ thí chủ ${devotee.name} đã phát tâm dâng cúng ${giftName}, tích thêm ${merit} điểm công đức. Nguyện cầu chư Phật gia hộ cho thí chủ vạn sự cát tường như ý.`;
       const event = pushEventLog({ type: giftType === 'dragon' ? 'grandCeremony' : 'offerGift', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, giftType, giftName, coins, merit, wish, ttsText, ttsVoice: 'vi-VN' });
+      broadcastRitual(event, devotee);
       saveState();
       return { event, state: getPublicState() };
     },
@@ -376,6 +376,7 @@ window.TempleLocal = (function () {
       const devotee = recordDevotee(user, uniqueId, avatar, merit, 0, 0, `Xin xăm: Quẻ số ${fortune.number} (${fortune.rank})`);
       const ttsText = params.readTts === false ? '' : `Thí chủ ${devotee.name} vừa gieo được ${fortune.ttsSummary}`;
       const event = pushEventLog({ type: 'drawFortune', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, topic, fortune, merit, ttsText, ttsVoice: 'vi-VN' });
+      broadcastRitual(event, devotee);
       saveState();
       return { event, state: getPublicState() };
     },
@@ -391,6 +392,14 @@ window.TempleLocal = (function () {
     }
   };
 
+  // broadcast nghi thức của mình lên kênh chung + đồng bộ công đức hiển thị
+  function broadcastRitual(event, devotee) {
+    const n = net();
+    if (!n) return;
+    n.setMerit(devotee ? devotee.merit : 0);
+    n.sendRitual(event);
+  }
+
   function handleRpc(method, params = {}) {
     switch (method) {
       case 'temple.getState': return { state: getPublicState() };
@@ -405,47 +414,46 @@ window.TempleLocal = (function () {
       case 'temple.register': {
         // Ghi danh pháp danh → biết mình đang ở ghế / hàng chờ / cần chọn ghế
         const name = sanitizeUserName(params.user);
-        const uniqueId = params.uniqueId || name.toLowerCase().replace(/\s+/g, '');
-        const seated = seatIndexOf(uniqueId, name);
+        const n = net();
+        if (!n) return { state: getPublicState(), registered: false, error: 'offline' };
+        n.setIdentity(name);
+        const r = sharedRoster();
+        const seated = r.seats.findIndex((s) => s && s.uniqueId === n.sid);
         if (seated >= 0) return { state: getPublicState(), registered: true, seatIdx: seated };
-        const qIdx = queueIndexOf(uniqueId, name);
+        const qIdx = r.queue.findIndex((q) => q.sid === n.sid);
         if (qIdx >= 0) return { state: getPublicState(), registered: true, queued: true, position: qIdx + 1 };
-        const free = freeSeatIndexes();
-        if (!free.length) {
-          state.queue.push({ name, uniqueId, isSim: false });
-          const evt = pushEventLog({ type: 'queued', user: name, uniqueId, position: state.queue.length, isSim: false });
+        if (!r.freeSeats.length) {
+          n.enqueue();
+          const evt = pushEventLog({ type: 'queued', user: name, uniqueId: n.sid, position: r.queue.length + 1 });
           saveState();
-          return { event: evt, state: getPublicState(), registered: true, queued: true, position: state.queue.length };
+          return { event: evt, state: getPublicState(), registered: true, queued: true, position: r.queue.length + 1 };
         }
         recordDevotee(name, '', '', 0, 0, 0); // key = tên hiển thị, trùng với record nghi thức
         saveState();
-        return { state: getPublicState(), registered: true, needPick: true, freeSeats: free };
+        return { state: getPublicState(), registered: true, needPick: true, freeSeats: r.freeSeats };
       }
       case 'temple.pickSeat': {
         const name = sanitizeUserName(params.user);
-        const uniqueId = params.uniqueId || name.toLowerCase().replace(/\s+/g, '');
+        const n = net();
+        if (!n) return { state: getPublicState(), error: 'offline' };
+        const r = sharedRoster();
+        const mine = r.seats.findIndex((s) => s && s.uniqueId === n.sid);
+        if (mine >= 0) return { state: getPublicState(), seatIdx: mine, alreadySeated: true };
         const idx = Number(params.seatIdx);
-        if (seatIndexOf(uniqueId, name) >= 0) {
-          return { state: getPublicState(), seatIdx: seatIndexOf(uniqueId, name), alreadySeated: true };
+        const res = n.claimSeat(idx);
+        if (res.error) {
+          return { state: getPublicState(), error: res.error, freeSeats: sharedRoster().freeSeats };
         }
-        if (idx < 0 || idx >= TOTAL_SEATS || state.seats[idx]) {
-          return { state: getPublicState(), error: 'occupied', freeSeats: freeSeatIndexes() };
-        }
-        const qi = queueIndexOf(uniqueId, name);
-        if (qi >= 0) state.queue.splice(qi, 1);
-        const evt = occupySeat(idx, { name, uniqueId }, false);
+        const evt = pushEventLog({ type: 'seatTaken', seatIdx: idx, user: name, uniqueId: n.sid });
         saveState();
         return { event: evt, state: getPublicState(), seatIdx: idx };
       }
       case 'temple.leaveSeat': {
         // Thoát web = mất ghế; vào lại phải xếp hàng/chọn lại
-        const name = sanitizeUserName(params.user);
-        const uniqueId = params.uniqueId || name.toLowerCase().replace(/\s+/g, '');
-        const idx = seatIndexOf(uniqueId, name);
-        const qi = queueIndexOf(uniqueId, name);
-        let evt = null;
-        if (qi >= 0) state.queue.splice(qi, 1);
-        if (idx >= 0) evt = vacateSeat(idx);
+        const n = net();
+        const idx = mySeatIdx();
+        if (n) n.leave();
+        const evt = idx >= 0 ? pushEventLog({ type: 'seatVacated', seatIdx: idx, user: sanitizeUserName(params.user), uniqueId: mySid() }) : null;
         saveState();
         return { event: evt, state: getPublicState() };
       }
@@ -455,6 +463,27 @@ window.TempleLocal = (function () {
       default:
         return { state: getPublicState() };
     }
+  }
+
+  // ── Kết nối kênh chung: người thật thấy nhau, ghế/hàng chờ dùng chung ──
+  const n = net();
+  if (n) {
+    n.onChange = () => {
+      if (typeof onEventCb === 'function') onEventCb({ state: getPublicState() });
+    };
+    n.onRitual = (ev) => {
+      // nghi thức của người khác: cộng vào tổng công đức chùa (phiên này)
+      state.totalMerit += ev.merit || 0;
+      if (ev.type === 'burnIncense') state.totalIncense += ev.count || 3;
+      saveState();
+      if (typeof onEventCb === 'function') onEventCb({ event: ev, state: getPublicState() });
+    };
+    n.onSeatLost = () => {
+      const evt = pushEventLog({ type: 'seatLost', user: n.me.name || 'Bạn', uniqueId: n.sid });
+      saveState();
+      if (typeof onEventCb === 'function') onEventCb({ event: evt, state: getPublicState() });
+    };
+    n.start();
   }
 
   return {
