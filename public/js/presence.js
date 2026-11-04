@@ -10,7 +10,7 @@
  * đủ rộng để tab chạy nền bị Chrome throttle timer vẫn không bị "bay màu".
  * Mất kết nối → chạy một mình như cũ.
  */
-window.TempleNet = (function () {
+const MeshNet = function () {
   const TOPIC = 'cvtc-hall-8f3k2qz';
   const BASE = 'https://ntfy.sh';
   const HEARTBEAT_MS = 8000;
@@ -490,5 +490,309 @@ window.TempleNet = (function () {
     set onChange(cb) { onChangeCb = cb; },
     set onRitual(cb) { onRitualCb = cb; },
     set onSeatLost(cb) { onSeatLostCb = cb; }
+  };
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+ * FirebaseNet — engine chính khi có FIREBASE_CONFIG.
+ * Realtime Database: onDisconnect() tự xóa người + nhả ghế khi mất kết nối
+ * (không cần heartbeat), transaction claim ghế phân thắng ở server.
+ * ═══════════════════════════════════════════════════════════════════ */
+const FirebaseNet = function () {
+  const TOTAL_SEATS = 48;
+
+  let sid = sessionStorage.getItem('cvtc_sid');
+  if (!sid) {
+    sid = 's' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+    sessionStorage.setItem('cvtc_sid', sid);
+  }
+
+  const me = { sid, name: '', seat: -1, claimTs: 0, enqTs: 0, merit: 0 };
+  const startTs = Date.now();     // moc mo trang — event cu hon moc nay khong animate lai
+  const peers = new Map();        // sid -> {name, seat, enqTs, merit}
+  let seatMap = {};               // idx -> {sid, name}
+  const recentRits = [];
+  const seenRits = new Set();
+  let onChangeCb = null, onRitualCb = null, onSeatLostCb = null;
+  let db = null, myRef = null, seatsRef = null, eventsRef = null;
+  let started = false, dead = false, up = false;
+
+  function now() { return Date.now(); }
+  function markDirty() {
+    setTimeout(() => { if (typeof onChangeCb === 'function') onChangeCb(); }, 30);
+  }
+
+  function writeMe() {
+    if (!myRef || dead) return;
+    try {
+      myRef.set({
+        name: me.name, seat: me.seat, enqTs: me.seat < 0 ? me.enqTs : 0,
+        merit: me.merit, ts: firebase.database.ServerValue.TIMESTAMP
+      });
+    } catch (_) { }
+  }
+
+  // ── sơ đồ: ghế lấy từ node seats/ (authoritative), queue từ peers ──────
+  function roster() {
+    const seats = new Array(TOTAL_SEATS).fill(null);
+    const queue = [];
+    const people = [];
+    for (const p of peers.values()) {
+      people.push({ sid: p.sid, name: p.name || '', merit: p.merit || 0, seat: p.seat, enqTs: p.enqTs });
+      if (p.enqTs && !(Number.isInteger(p.seat) && p.seat >= 0)) queue.push({ sid: p.sid, name: p.name, enqTs: p.enqTs });
+    }
+    people.push({ sid, name: me.name || '', merit: me.merit, seat: me.seat, enqTs: me.enqTs });
+    if (me.enqTs && me.seat < 0) queue.push({ sid, name: me.name, enqTs: me.enqTs });
+    for (const [k, v] of Object.entries(seatMap || {})) {
+      const i = +k;
+      if (i >= 0 && i < TOTAL_SEATS && v && v.sid) {
+        seats[i] = { seatIdx: i, name: v.name || '', uniqueId: v.sid, isSim: false };
+      }
+    }
+    // chỉ giữ claim của người còn sống (phòng trường hợp hiếm: seat record sót lại)
+    for (let i = 0; i < TOTAL_SEATS; i++) {
+      const s = seats[i];
+      if (s && s.uniqueId !== sid && !peers.has(s.uniqueId)) seats[i] = null;
+    }
+    queue.sort((a, b) => a.enqTs - b.enqTs || (a.sid < b.sid ? -1 : 1));
+    const freeSeats = [];
+    for (let i = 0; i < TOTAL_SEATS; i++) if (!seats[i]) freeSeats.push(i);
+    return { seats, queue, people, freeSeats };
+  }
+
+  // đến lượt mình trong hàng chờ + còn ghế trống → transaction claim
+  function maybePromoteMyself() {
+    if (me.seat >= 0 || !me.enqTs || !seatsRef || dead) return;
+    const r = roster();
+    const ahead = r.queue.filter((q) => q.sid !== sid &&
+      (q.enqTs < me.enqTs || (q.enqTs === me.enqTs && q.sid < sid))).length;
+    if (ahead < r.freeSeats.length) claimSeat(r.freeSeats[ahead]);
+  }
+
+  function claimSeat(seatIdx) {
+    if (seatIdx < 0 || seatIdx >= TOTAL_SEATS || dead) return { error: 'invalid' };
+    const holder = seatMap && seatMap[seatIdx];
+    if (holder && holder.sid && holder.sid !== sid) return { error: 'occupied' };
+    if (!seatsRef) { // chưa kết nối → claim lạc quan, hội tụ sau
+      me.seat = seatIdx; me.claimTs = now(); me.enqTs = 0;
+      markDirty();
+      return { seatIdx };
+    }
+    seatsRef.child(seatIdx).transaction(
+      (cur) => (cur === null ? { sid, name: me.name, ts: firebase.database.ServerValue.TIMESTAMP } : undefined),
+      (err, committed, snap) => {
+        if (err || !committed || (snap && snap.val() && snap.val().sid !== sid)) {
+          if (me.seat === seatIdx) { me.seat = -1; me.claimTs = 0; }
+          me.enqTs = me.enqTs || now();
+          writeMe();
+          if (typeof onSeatLostCb === 'function') onSeatLostCb(seatIdx);
+          return;
+        }
+        me.seat = seatIdx; me.claimTs = now(); me.enqTs = 0;
+        try { seatsRef.child(seatIdx).onDisconnect().remove(); } catch (_) { }
+        writeMe();
+        markDirty();
+      },
+      false
+    );
+    // lạc quan: cho nhân vật đi vào chiếu ngay, thua thì callback trên nhả lại
+    me.seat = seatIdx; me.claimTs = now(); me.enqTs = 0;
+    markDirty();
+    return { seatIdx };
+  }
+
+  function leave() {
+    const hadSeat = me.seat;
+    me.seat = -1; me.claimTs = 0; me.enqTs = 0;
+    try {
+      if (hadSeat >= 0 && seatsRef) seatsRef.child(hadSeat).remove();
+      writeMe();
+    } catch (_) { }
+    markDirty();
+  }
+
+  function enqueue() {
+    if (!me.enqTs) { me.enqTs = now(); writeMe(); markDirty(); }
+    setTimeout(maybePromoteMyself, 400);
+    return me.enqTs;
+  }
+
+  function setIdentity(name) { me.name = String(name || '').slice(0, 40); writeMe(); }
+
+  function setMerit(m) { if (m !== me.merit) { me.merit = m; writeMe(); } }
+
+  function sendRitual(evt) {
+    if (!eventsRef || dead) return;
+    try {
+      eventsRef.push({
+        app: 'cv1', kind: evt.type, sid, name: me.name,
+        wish: String(evt.wish || evt.giftName || '').slice(0, 140),
+        merit: evt.merit || 0, count: evt.count || 0, giftName: evt.giftName || '',
+        fno: evt.fortune?.number || 0, frank: evt.fortune?.rank || '', ftitle: evt.fortune?.title || '',
+        seat: me.seat, ts: firebase.database.ServerValue.TIMESTAMP
+      });
+    } catch (_) { }
+  }
+
+  function start() {
+    if (started) return;
+    started = true;
+    me.name = sessionStorage.getItem('chua_vt_name') || '';
+    const cfg = window.FIREBASE_CONFIG;
+    try {
+      if (!cfg || !cfg.databaseURL || !window.firebase) { dead = true; return; }
+      firebase.initializeApp(cfg);
+      db = firebase.database();
+      myRef = db.ref('temple/users/' + sid);
+      seatsRef = db.ref('temple/seats');
+      eventsRef = db.ref('temple/events');
+
+      db.ref('.info/connected').on('value', (snap) => {
+        if (snap.val() === true && !dead) {
+          up = true;
+          try {
+            myRef.onDisconnect().remove();           // server tự xóa mình khi rớt mạng
+          } catch (_) { }
+          // claim lúc chưa kết nối → giờ đăng ký thật bằng transaction
+          if (me.seat >= 0) {
+            const want = me.seat;
+            me.seat = -1; me.claimTs = 0;
+            claimSeat(want);
+          }
+          writeMe();
+          markDirty();
+        }
+      });
+      db.ref('temple/users').on('value', (snap) => {
+        peers.clear();
+        snap.forEach((c) => { const v = c.val(); if (v) peers.set(c.key, v); });
+        maybePromoteMyself();
+        markDirty();
+      });
+      seatsRef.on('value', (snap) => {
+        seatMap = snap.val() || {};
+        maybePromoteMyself();
+        markDirty();
+      });
+      // feed nhật ký: người khác vào chiếu / ra về
+      seatsRef.on('child_added', (snap) => {
+        const v = snap.val();
+        if (!v || !v.sid || v.sid === sid) return;
+        recentRits.unshift({ type: 'seatTaken', user: v.name || 'Thí Chủ', uniqueId: v.sid, seatIdx: +snap.key, ts: now(), remote: true });
+        if (recentRits.length > 30) recentRits.length = 30;
+      });
+      seatsRef.on('child_removed', (snap) => {
+        const v = snap.val();
+        if (!v || !v.sid || v.sid === sid) return;
+        recentRits.unshift({ type: 'seatVacated', user: v.name || 'Thí Chủ', uniqueId: v.sid, seatIdx: +snap.key, ts: now(), remote: true });
+        if (recentRits.length > 30) recentRits.length = 30;
+      });
+      // feed: người khác mới vào hàng chờ
+      let prevEnq = {};
+      db.ref('temple/users').on('child_added', (snap) => {
+        const v = snap.val();
+        if (v && v.enqTs) prevEnq[snap.key] = v.enqTs;
+      });
+      db.ref('temple/users').on('child_changed', (snap) => {
+        const v = snap.val();
+        if (!v) return;
+        const was = prevEnq[snap.key] || 0;
+        if (v.enqTs && !was && snap.key !== sid) {
+          recentRits.unshift({ type: 'queued', user: v.name || 'Thí Chủ', uniqueId: snap.key, position: 0, ts: now(), remote: true });
+          if (recentRits.length > 30) recentRits.length = 30;
+          markDirty();
+        }
+        prevEnq[snap.key] = v.enqTs || 0;
+      });
+      eventsRef.limitToLast(30).on('child_added', (snap) => {
+        const m = snap.val();
+        if (!m || m.app !== 'cv1' || !m.sid || m.sid === sid) return;
+        const key = snap.key || (m.sid + ':' + m.ts);
+        if (seenRits.has(key)) return;
+        seenRits.add(key);
+        const ev = {
+          type: m.kind || 'burnIncense', user: m.name || 'Thí Chủ', uniqueId: m.sid,
+          wish: m.wish || '', merit: m.merit || 0, count: m.count || 0, giftName: m.giftName || '',
+          fortune: m.fno ? { number: m.fno, rank: m.frank || '', title: m.ftitle || '' } : null,
+          seatIdx: Number.isInteger(m.seat) ? m.seat : -1, ts: m.ts || now(), remote: true
+        };
+        recentRits.unshift(ev);
+        if (recentRits.length > 30) recentRits.length = 30;
+        // event cu (truoc luc mo trang) chi vao feed, khong animate lai
+        if (ev.ts >= startTs - 30000 && typeof onRitualCb === 'function') onRitualCb(ev);
+        markDirty();
+      });
+      window.addEventListener('pagehide', () => leave());
+    } catch (_) { dead = true; }
+  }
+
+  return {
+    start,
+    sid,
+    me,
+    get dead() { return dead; },
+    get up() { return up; },
+    roster,
+    setIdentity,
+    claimSeat,
+    leave,
+    enqueue,
+    sendRitual,
+    setMerit,
+    recentRits,
+    set onChange(cb) { onChangeCb = cb; },
+    set onRitual(cb) { onRitualCb = cb; },
+    set onSeatLost(cb) { onSeatLostCb = cb; }
+  };
+};
+
+/* Chọn engine: Firebase nếu có config + kết nối được, ngược lại mesh dự phòng.
+ * Mọi client cùng ưu tiên Firebase → hội tụ một phòng; ai chặn được FB thì
+ * rớt xuống mesh và vẫn thấy các máy mesh khác. */
+window.TempleNet = (function () {
+  const mesh = MeshNet();
+  let fb = null;
+  if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.databaseURL && window.firebase) {
+    try { fb = FirebaseNet(); } catch (_) { fb = null; }
+  }
+  let eng = fb || mesh;
+  // FB không kết nối được trong 10s → chuyển hẳn sang mesh
+  let fbTimer = null;
+  const cbs = { onChange: null, onRitual: null, onSeatLost: null };
+  function bind(e) {
+    e.onChange = () => { if (eng === e && cbs.onChange) cbs.onChange(); };
+    e.onRitual = (ev) => { if (eng === e && cbs.onRitual) cbs.onRitual(ev); };
+    e.onSeatLost = (s) => { if (eng === e && cbs.onSeatLost) cbs.onSeatLost(s); };
+  }
+  bind(eng);
+  function start() {
+    if (fb) {
+      fb.start();
+      fbTimer = setTimeout(() => {
+        if ((fb.dead || !fb.up) && eng === fb) {
+          eng = mesh; bind(mesh); mesh.start();
+          if (cbs.onChange) cbs.onChange();
+        }
+      }, 10000);
+    } else {
+      mesh.start();
+    }
+  }
+  const call = (fn, ...a) => (eng[fn] ? eng[fn](...a) : undefined);
+  return {
+    start,
+    get sid() { return eng.sid; },
+    get me() { return eng.me; },
+    get recentRits() { return eng.recentRits; },
+    roster: () => eng.roster(),
+    setIdentity: (n) => call('setIdentity', n),
+    claimSeat: (i) => call('claimSeat', i),
+    leave: () => call('leave'),
+    enqueue: () => call('enqueue'),
+    sendRitual: (e) => call('sendRitual', e),
+    setMerit: (m) => call('setMerit', m),
+    set onChange(cb) { cbs.onChange = cb; },
+    set onRitual(cb) { cbs.onRitual = cb; },
+    set onSeatLost(cb) { cbs.onSeatLost = cb; }
   };
 })();
