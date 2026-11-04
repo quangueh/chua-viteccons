@@ -1,11 +1,11 @@
 /**
  * TempleLocal — Engine chùa online chạy hoàn toàn phía client (bản tĩnh, không server).
- * Mô phỏng lại logic Rituals của server.js: state, bảng công đức, quẻ xăm, autoSim.
+ * Mô phỏng lại logic Rituals của server.js: state, bảng công đức, quẻ xăm.
  * live.js gọi window.TempleLocal.handleRpc(...) và nhận state/event y hệt server thật.
  */
 window.TEMPLE_STATIC = true;
 window.TempleLocal = (function () {
-  const STORAGE_KEY = 'chua_viteccons_state_v2';
+  const STORAGE_KEY = 'chua_viteccons_state_v3';
   const TOTAL_SEATS = 48;
 
   // BỘ QUẺ LINH XĂM (bê nguyên từ server.js)
@@ -114,49 +114,19 @@ window.TempleLocal = (function () {
     return cleaned;
   }
 
-  // Không còn ghế "ảo" seed sẵn — phật tử chỉ xuất hiện khi người thật vào chùa
-  // (autoSim mô phỏng dòng người đến-đi liên tục như chùa thật)
-  const SIM_DEVOTEES = [
-    { user: 'KS. Ngọc Anh', uniqueId: 'ngocanh.pkt', wish: 'Cầu công trình bàn giao đúng tiến độ, chất lượng Build by Heart' },
-    { user: 'Trần Minh Quân', uniqueId: 'minhquan.ct', wish: 'Cầu an toàn lao động, không một tai nạn nào trên công trường' },
-    { user: 'Diệu Thảo Tâm An', uniqueId: 'tam_an_99', wish: 'Nam Mô A Di Đà Phật, nguyện cầu đại gia đình Viteccons bình an hưng thịnh' },
-    { user: 'Lê Hoàng Nam', uniqueId: 'hoangnam.doi', wish: 'Cầu thi công thuận lợi, trời thuận thủy hòa nhân an' },
-    { user: 'Phạm Thanh Hà', uniqueId: 'thanhha.kt', wish: 'Cầu thanh toán công nợ thông suốt, dòng tiền hanh thông' },
-    { user: 'Vũ Đức Thịnh', uniqueId: 'ducthinh.vt', wish: 'Con xin gieo một quẻ cầu tài lộc đầu năm' },
-    { user: 'Anh Bảy Cơ Khí', uniqueId: 'bay.cokhi', wish: 'Cầu máy móc vận hành trơn tru, hàng mục hoàn thành đẹp đẽ' },
-    { user: 'Chị Hằng Kế Toán', uniqueId: 'hang.kt', wish: 'Cầu quyết toán trôi chảy, số liệu khớp từng đồng' },
-    { user: 'Thích An Toàn', uniqueId: 'sim.antoan', wish: 'Cầu an toàn lao động, ai cũng về nhà bình an' },
-    { user: 'Thích Trúng Thầu', uniqueId: 'sim.trungthau', wish: 'Cầu hồ sơ thầu trúng liên miên' },
-    { user: 'Thích Đổ Bê Tông', uniqueId: 'sim.betong', wish: 'Cầu bê tông đạt mác, cốt thép vững chãi' },
-    { user: 'Thích Nghiệm Thu', uniqueId: 'sim.nghiemthu', wish: 'Cầu nghiệm thu một lần qua, hồ sơ thông suốt' },
-    { user: 'KS. Bảo Kết Cấu', uniqueId: 'bao.kc', wish: 'Cầu sắt thép vững chãi, bê tông đạt mác' },
-    { user: 'Anh Phong Giàn Giáo', uniqueId: 'phong.gg', wish: 'Cầu thao tác trên cao luôn an toàn tuyệt đối' },
-    { user: 'Chị Yến Vật Tư', uniqueId: 'yen.vt', wish: 'Cầu vật tư về đúng giá, không thất thoát' },
-    { user: 'CN. Vinh Điện Nước', uniqueId: 'vinh.dn', wish: 'Cầu hệ thống điện nước vận hành trơn tru' },
-    { user: 'Bác Lợi Lái Cẩu', uniqueId: 'loi.cau', wish: 'Cầu mỗi nhịp cẩu đều chuẩn xác, gió lành mây êm' },
-    { user: 'CN. Tấn Hàn', uniqueId: 'tan.han', wish: 'Cầu mối hàn chắc bền như lòng anh em' },
-    { user: 'KS. Dũng QS', uniqueId: 'dung.qs', wish: 'Cầu boq khớp từng hạng mục, thanh toán không trễ' },
-    { user: 'Chị Thu Kế Hoạch', uniqueId: 'thu.kh', wish: 'Cầu tiến độ chạy đúng, milestone không trượt' },
-    { user: 'Em Trang Thiết Kế', uniqueId: 'trang.tk', wish: 'Cầu bản vẽ shop drawing duyệt một lần qua' },
-    { user: 'CN. Cường Cốp Pha', uniqueId: 'cuong.cp', wish: 'Cầu cốp pha chắc tay, đổ bê tông mướt mặt' },
-    { user: 'KS. Tú Trắc Địa', uniqueId: 'tu.td', wish: 'Cầu tọa độ chuẩn từng milimet, không sai sót' },
-    { user: 'Chú Tư Bảo Vệ', uniqueId: 'tu.baove', wish: 'Cầu trực đêm yên ả, mọi điều bình an vô sự' },
-    { user: 'Thím Sáu Bếp Ăn', uniqueId: 'sau.bepan', wish: 'Cầu anh em công trường ăn ngon khỏe mạnh' },
-    { user: 'Thích Giám Sát', uniqueId: 'sim.giamsat', wish: 'Cầu giám sát tinh tường, công trình vẹn toàn' },
-    { user: 'Thích Tiến Độ', uniqueId: 'sim.tiendo', wish: 'Cầu tiến độ như ý, bàn giao đúng hẹn' },
-    { user: 'Thích Tâm Tịnh', uniqueId: 'sim.tamtinh', wish: 'Cầu tâm an tịnh, vạn sự hanh thông' }
-  ];
+  // Không còn người ảo — mọi phật tử trong chùa đều là người thật ghi danh.
+  // Số liệu, bảng công đức, nhật ký cũng chỉ ghi nhận hoạt động thật.
 
   const DEFAULT_STATE = () => ({
-    totalIncense: 108,
-    totalMerit: 1080,
-    woodenFishHits: 360,
-    bellRings: 36,
-    lanternCount: 18,
-    fortuneCount: 12,
-    activeIncenseSticks: 9,
-    haloIntensity: 0.45,
-    offerings: { lotus: 3, fruit: 2, lamp: 2, dragon: 1 },
+    totalIncense: 0,
+    totalMerit: 0,
+    woodenFishHits: 0,
+    bellRings: 0,
+    lanternCount: 0,
+    fortuneCount: 0,
+    activeIncenseSticks: 3,
+    haloIntensity: 0.35,
+    offerings: { lotus: 0, fruit: 0, lamp: 0, dragon: 0 },
     devotees: {},
     seats: Array(TOTAL_SEATS).fill(null),
     queue: [],
@@ -166,9 +136,7 @@ window.TempleLocal = (function () {
       ttsVoice: 'maichi',
       bgMusicEnabled: true,
       sfxEnabled: true,
-      smokeDensity: 1.0,
-      autoSim: true,
-      autoSimIntervalMs: 12000
+      smokeDensity: 1.0
     },
     tiktok: { connected: false, connecting: false, username: '', roomId: null, viewerCount: 0, lastError: null }
   });
@@ -188,7 +156,7 @@ window.TempleLocal = (function () {
           devotees: saved.devotees || {},
           offerings: { ...base.offerings, ...(saved.offerings || {}) },
           recentEvents: saved.recentEvents || [],
-          settings: { ...base.settings, ...(saved.settings || {}), autoSim: true },
+          settings: { ...base.settings, ...(saved.settings || {}) },
           tiktok: base.tiktok
         };
       }
@@ -312,14 +280,8 @@ window.TempleLocal = (function () {
     };
   }
 
-  // live.js gán callback này để nhận event do autoSim sinh ra
+  // app3d.js gán callback này để nhận event + state mới
   let onEventCb = null;
-  function emit(event) {
-    saveState();
-    if (typeof onEventCb === 'function') {
-      onEventCb({ event, state: getPublicState() });
-    }
-  }
 
   const Rituals = {
     burnIncense(params = {}) {
@@ -424,75 +386,10 @@ window.TempleLocal = (function () {
 
     updateSettings(params = {}) {
       state.settings = { ...state.settings, ...params };
-      if (typeof params.autoSim === 'boolean') configureAutoSim(params.autoSim);
       saveState();
       return { state: getPublicState() };
     }
   };
-
-  // AUTO-SIMULATION — mô phỏng người thật đến chùa: xếp hàng → ngồi ghế → lên thắp hương → ra về
-  let autoSimTimer = null;
-  function runSingleSimulationStep() {
-    // 1) Có người chờ + có ghế trống → ưu tiên cho vào ghế trước
-    if (state.queue.length && freeSeatIndexes().length) {
-      const e = promoteQueue();
-      if (e) emit(e); else saveState();
-      return;
-    }
-    const roll = Math.random();
-    const seatedSimIdxs = [];
-    state.seats.forEach((s, i) => { if (s && s.isSim) seatedSimIdxs.push(i); });
-    const idleSims = SIM_DEVOTEES.filter((d) => seatIndexOf(d.uniqueId, d.user) < 0 && queueIndexOf(d.uniqueId, d.user) < 0);
-
-    // 2) Khách mới đến chùa (~40%) — chỉ khi hàng chờ chưa quá dài
-    if (roll < 0.40 && idleSims.length && state.queue.length < 8) {
-      const pick = idleSims[Math.floor(Math.random() * idleSims.length)];
-      const free = freeSeatIndexes();
-      if (free.length) {
-        emit(occupySeat(free[Math.floor(Math.random() * free.length)], pick, true));
-      } else {
-        state.queue.push({ name: pick.user, uniqueId: pick.uniqueId, isSim: true });
-        emit(pushEventLog({ type: 'queued', user: pick.user, uniqueId: pick.uniqueId, position: state.queue.length, isSim: true }));
-      }
-      return;
-    }
-    // 3) Phật tử đang ngồi lên dâng hương (~82%)
-    if (roll < 0.88 && seatedSimIdxs.length) {
-      const idx = seatedSimIdxs[Math.floor(Math.random() * seatedSimIdxs.length)];
-      const occ = state.seats[idx];
-      const pick = SIM_DEVOTEES.find((d) => d.uniqueId === occ.uniqueId) || { user: occ.name, uniqueId: occ.uniqueId, wish: 'Nam mô A Di Đà Phật, cầu gia đình bình an' };
-      const r = Math.random();
-      let res;
-      if (r < 0.34) {
-        res = Rituals.burnIncense({ user: pick.user, uniqueId: pick.uniqueId, count: 3, wish: pick.wish, readTts: false });
-      } else if (r < 0.56) {
-        res = Rituals.sendPrayer({ user: pick.user, uniqueId: pick.uniqueId, wish: pick.wish, readTts: false });
-      } else if (r < 0.72) {
-        res = Rituals.drawFortune({ user: pick.user, uniqueId: pick.uniqueId, topic: pick.wish, readTts: false });
-      } else if (r < 0.88) {
-        res = Rituals.offerGift({ user: pick.user, uniqueId: pick.uniqueId, giftType: 'lotus', coins: 15, giftName: 'Hoa Sen Vàng Tinh Khiết', readTts: false });
-      } else {
-        res = Rituals.ringBell({ user: pick.user, uniqueId: pick.uniqueId, count: 1, wish: pick.wish, readTts: false });
-      }
-      emit(res.event);
-      return;
-    }
-    // 4) Phật tử công phu xong ra về — nhả ghế cho người xếp hàng
-    if (seatedSimIdxs.length) {
-      emit(vacateSeat(seatedSimIdxs[Math.floor(Math.random() * seatedSimIdxs.length)]));
-    }
-  }
-
-  function configureAutoSim(enabled) {
-    state.settings.autoSim = Boolean(enabled);
-    if (autoSimTimer) {
-      clearInterval(autoSimTimer);
-      autoSimTimer = null;
-    }
-    if (state.settings.autoSim) {
-      autoSimTimer = setInterval(runSingleSimulationStep, state.settings.autoSimIntervalMs || 12000);
-    }
-  }
 
   function handleRpc(method, params = {}) {
     switch (method) {
@@ -552,10 +449,6 @@ window.TempleLocal = (function () {
         saveState();
         return { event: evt, state: getPublicState() };
       }
-      case 'live.setAutoSim':
-        configureAutoSim(Boolean(params.enabled));
-        saveState();
-        return { state: getPublicState() };
       case 'live.connect':
       case 'live.disconnect':
         return { state: getPublicState() };
@@ -563,8 +456,6 @@ window.TempleLocal = (function () {
         return { state: getPublicState() };
     }
   }
-
-  configureAutoSim(state.settings.autoSim !== false);
 
   return {
     handleRpc,

@@ -954,25 +954,18 @@ import { makeDevotee } from './chars3d.js';
 
     const lbList = document.getElementById('leaderboardList');
     if (lbList) {
-      lbList.innerHTML = lb.slice(0, 4).map((item) => `
+      lbList.innerHTML = lb.length
+        ? lb.slice(0, 4).map((item) => `
         <div class="leader-item">
           <span class="leader-rank">${item.rank}</span>
           <span class="leader-name">${escapeHtml(shortenName(item.name, 14))}</span>
           <span class="leader-merit">${Number(item.merit).toLocaleString('vi-VN')}</span>
-        </div>`).join('');
+        </div>`).join('')
+        : '<div class="event-feed-empty">Chưa có ai dâng lễ — hãy là người đầu tiên 🙏</div>';
     }
 
     const liveText = document.getElementById('liveStatusText');
-    if (liveText) {
-      liveText.textContent = st.settings?.autoSim
-        ? 'CHÙA VITECCONS • ĐẠO TRÀNG ĐANG TỤNG KINH'
-        : 'CHÙA VITECCONS • ĐỨC PHẬT A DI ĐÀ';
-    }
-    const btnAutoSim = document.getElementById('btnToggleAutoSim');
-    if (btnAutoSim && st.settings) {
-      btnAutoSim.textContent = st.settings.autoSim ? '🏮 Đạo Tràng Tự Đi Chùa: ĐANG BẬT' : '🏮 Đạo Tràng Tự Đi Chùa: TẮT';
-      btnAutoSim.classList.toggle('active-toggle', Boolean(st.settings.autoSim));
-    }
+    if (liveText) liveText.textContent = 'CHÙA VITECCONS • ĐỨC PHẬT A DI ĐÀ';
     if (st.settings) {
       if (typeof st.settings.musicVolume === 'number') {
         audio.setMusicVolume(st.settings.musicVolume);
@@ -990,7 +983,9 @@ import { makeDevotee } from './chars3d.js';
 
     const feed = document.getElementById('eventFeed');
     if (feed && Array.isArray(st.recentEvents)) {
-      feed.innerHTML = st.recentEvents.slice(0, 8).map((ev) => `<div class="event-feed-item">${formatEventSummary(ev)}</div>`).join('');
+      feed.innerHTML = st.recentEvents.length
+        ? st.recentEvents.slice(0, 8).map((ev) => `<div class="event-feed-item">${formatEventSummary(ev)}</div>`).join('')
+        : '<div class="event-feed-empty">Nhật ký trống — mọi công đức đều do người thật ghi nhận</div>';
     }
   }
 
@@ -1270,12 +1265,6 @@ import { makeDevotee } from './chars3d.js';
   // bấm ra ngoài panel cũng đóng
   document.getElementById('seatModal')?.addEventListener('click', (e) => {
     if (e.target.id === 'seatModal') e.currentTarget.classList.remove('visible');
-  });
-
-  let autoSimState = true;
-  bind('btnToggleAutoSim', () => {
-    autoSimState = !autoSimState;
-    callRpc('live.setAutoSim', { enabled: autoSimState });
   });
 
   bind('btnToggleTts', (e) => {

@@ -740,6 +740,16 @@ body {
   color: var(--gold-bright);
 }
 
+.event-feed-empty {
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px dashed rgba(255, 210, 140, 0.18);
+  color: rgba(243, 229, 207, 0.55);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .dock-footer {
   text-align: center;
   font-size: 11.5px;
@@ -769,6 +779,7 @@ body {
     display: none;
   }
 }
+
 /* ==========================================================================
    CHỌN CHIẾU — kiểu ghế rạp phim (glass iOS)
    ========================================================================== */
@@ -786,10 +797,12 @@ body {
   transition: opacity 0.28s ease;
   z-index: 40;
 }
+
 .seat-modal-overlay.visible {
   opacity: 1;
   pointer-events: auto;
 }
+
 .seat-panel {
   width: min(560px, 88%);
   padding: 20px 22px 16px;
@@ -803,9 +816,11 @@ body {
   transform: translateY(14px) scale(0.97);
   transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
+
 .seat-modal-overlay.visible .seat-panel {
   transform: translateY(0) scale(1);
 }
+
 .seat-panel-title {
   font-family: 'Noto Serif', serif;
   font-size: 17px;
@@ -815,12 +830,14 @@ body {
   color: #ffd98a;
   text-shadow: 0 0 18px rgba(255, 180, 80, 0.5);
 }
+
 .seat-panel-sub {
   text-align: center;
   font-size: 11.5px;
   color: rgba(243, 229, 207, 0.72);
   margin-top: 4px;
 }
+
 .seat-altar-line {
   text-align: center;
   font-size: 11px;
@@ -829,15 +846,18 @@ body {
   margin: 12px 0 10px;
   opacity: 0.9;
 }
+
 .seat-map {
   display: flex;
   gap: 14px;
   justify-content: center;
   align-items: stretch;
 }
+
 .seat-wing {
   flex: 1;
 }
+
 .seat-wing-name {
   text-align: center;
   font-size: 10px;
@@ -845,6 +865,7 @@ body {
   color: rgba(255, 214, 140, 0.6);
   margin-bottom: 6px;
 }
+
 .seat-aisle {
   display: flex;
   flex-direction: column;
@@ -854,11 +875,13 @@ body {
   text-align: center;
   padding: 0 2px;
 }
+
 .seat-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 7px;
 }
+
 .seat-cell {
   aspect-ratio: 1;
   border-radius: 9px;
@@ -875,11 +898,13 @@ body {
   padding: 2px;
   transition: transform 0.12s ease, background 0.15s, box-shadow 0.15s;
 }
+
 .seat-cell .cell-num {
   font-size: 10px;
   font-weight: 700;
   opacity: 0.9;
 }
+
 .seat-cell .cell-name {
   font-size: 7.5px;
   line-height: 1;
@@ -889,22 +914,26 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .seat-cell.free {
   background: rgba(120, 200, 120, 0.14);
   border-color: rgba(150, 230, 160, 0.38);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
+
 .seat-cell.free:hover {
   transform: translateY(-2px) scale(1.08);
   background: rgba(140, 220, 140, 0.28);
   box-shadow: 0 0 14px rgba(140, 230, 150, 0.45);
 }
+
 .seat-cell.taken {
   background: rgba(30, 12, 6, 0.55);
   border-color: rgba(255, 210, 140, 0.12);
   color: rgba(230, 200, 160, 0.55);
   cursor: not-allowed;
 }
+
 .seat-cell.mine {
   background: linear-gradient(160deg, rgba(255, 190, 80, 0.4), rgba(230, 130, 40, 0.35));
   border-color: rgba(255, 220, 140, 0.85);
@@ -912,6 +941,7 @@ body {
   color: #fff5dc;
   cursor: default;
 }
+
 .seat-legend {
   display: flex;
   justify-content: center;
@@ -920,6 +950,7 @@ body {
   font-size: 11px;
   color: rgba(243, 229, 207, 0.75);
 }
+
 .seat-legend .lg {
   display: inline-block;
   width: 11px;
@@ -928,9 +959,22 @@ body {
   margin-right: 5px;
   vertical-align: -1px;
 }
-.seat-legend .free { background: rgba(120, 200, 120, 0.4); border: 1px solid rgba(150, 230, 160, 0.6); }
-.seat-legend .taken { background: rgba(30, 12, 6, 0.7); border: 1px solid rgba(255, 210, 140, 0.25); }
-.seat-legend .mine { background: rgba(255, 190, 80, 0.55); border: 1px solid rgba(255, 220, 140, 0.9); }
+
+.seat-legend .free {
+  background: rgba(120, 200, 120, 0.4);
+  border: 1px solid rgba(150, 230, 160, 0.6);
+}
+
+.seat-legend .taken {
+  background: rgba(30, 12, 6, 0.7);
+  border: 1px solid rgba(255, 210, 140, 0.25);
+}
+
+.seat-legend .mine {
+  background: rgba(255, 190, 80, 0.55);
+  border: 1px solid rgba(255, 220, 140, 0.9);
+}
+
 .seat-close {
   margin-top: 14px;
   width: 100%;
@@ -948,7 +992,10 @@ body {
   padding: 8px 10px;
   text-align: center;
 }
-.seat-status b { color: #ffd98a; }
+
+.seat-status b {
+  color: #ffd98a;
+}
 
 /* toast thông báo giữa scene */
 .temple-toast {
@@ -973,6 +1020,7 @@ body {
   transition: opacity 0.25s, transform 0.25s;
   z-index: 45;
 }
+
 .temple-toast.visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
