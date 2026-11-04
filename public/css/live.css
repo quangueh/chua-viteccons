@@ -345,6 +345,26 @@ body {
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
 }
 
+/* Thẻ Cầu Duyên — tông hồng nổi bật giữa hàng thẻ lễ */
+.gift-coin-tag.pink {
+  color: #3d0a1e;
+  background: linear-gradient(180deg, #ffb1c9, #e86a92);
+}
+
+.hud-gift-card.duyen-card {
+  border-color: rgba(255, 150, 180, 0.4);
+  background: rgba(70, 22, 34, 0.5);
+}
+
+.hud-gift-card.duyen-card .gift-title {
+  color: #ffb9cd;
+}
+
+/* có lời trao duyên đến → thẻ 💞 nhấp nháy cho dễ thấy */
+.hud-gift-card.duyen-card.has-req {
+  animation: duyenPulse 1.2s ease-in-out infinite;
+}
+
 .gift-card-body {
   display: flex;
   align-items: center;

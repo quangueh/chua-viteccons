@@ -1530,8 +1530,13 @@ import { makeDevotee } from './chars3d.js';
       }
     }
   };
-  const openDuyen = () => { renderDuyenModal(); if (duyenModal) duyenModal.hidden = false; };
+  const openDuyen = () => {
+    if (!sessionStorage.getItem('chua_vt_name')) { toast('Ghi danh pháp danh trước đã đạo hữu 🙏'); return; }
+    renderDuyenModal();
+    if (duyenModal) duyenModal.hidden = false;
+  };
   bind('btnDuyen', openDuyen);
+  bind('cardDuyen', openDuyen);
   bind('btnCloseDuyen', () => { if (duyenModal) duyenModal.hidden = true; });
   const endDuyen = () => { window.TempleNet?.endDuyen(); };
   bind('btnEndDuyen', endDuyen);
@@ -1541,6 +1546,7 @@ import { makeDevotee } from './chars3d.js';
     window.TempleNet.onDuyenReq = (reqs) => {
       duyenReqs = reqs || [];
       document.getElementById('btnDuyen')?.classList.toggle('has-req', duyenReqs.length > 0);
+      document.getElementById('cardDuyen')?.classList.toggle('has-req', duyenReqs.length > 0);
       if (duyenModal && !duyenModal.hidden) renderDuyenModal();
     };
     window.TempleNet.onBond = (b) => {

@@ -13,7 +13,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Noto+Serif:wght@700;900&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="/css/live.css?v=14" />
+  <link rel="stylesheet" href="/css/live.css?v=15" />
   <script>
     // Cổng pháp danh: chưa ghi danh → chặn vào chùa (chạy đồng bộ, không flash cho người đã ghi danh)
     try { if (!sessionStorage.getItem('chua_vt_name')) document.documentElement.classList.add('need-name'); }
@@ -88,6 +88,14 @@
               <div class="gift-card-body">
                 <span class="gift-emoji">🪷</span>
                 <span class="gift-title">Hoa sen</span>
+              </div>
+            </div>
+
+            <div class="hud-gift-card duyen-card" id="cardDuyen" title="Bấm để Cầu Duyên — chọn đạo hữu nên duyên">
+              <div class="gift-coin-tag pink">CẦU DUYÊN</div>
+              <div class="gift-card-body">
+                <span class="gift-emoji">💞</span>
+                <span class="gift-title">Cầu duyên</span>
               </div>
             </div>
           </div>
@@ -254,8 +262,8 @@
   <div class="duyen-modal-overlay" id="duyenModal" hidden>
     <div class="duyen-panel glass-panel">
       <div class="duyen-title">💞 CẦU DUYÊN</div>
-      <div class="duyen-sub">Hai bên cùng đồng ý trao duyên sẽ có khung chat riêng.<br />Tin nhắn riêng mất hết khi tải
-        lại trang.</div>
+      <div class="duyen-sub">Chọn một đạo hữu để nên duyên — họ bấm <b>Đồng Ý</b><br />là hai bạn có khung chat riêng
+        ngay (F5 mất hết).</div>
       <div class="duyen-bond-box" id="duyenBondBox" hidden>
         💞 Đã kết duyên với <b id="duyenBondName"></b>
         <button class="duyen-btn end" id="btnEndDuyen2">Chia Duyên</button>
@@ -264,7 +272,7 @@
         <div class="duyen-sec-title">📨 Lời trao duyên đến bạn</div>
         <div id="duyenReqList"></div>
       </div>
-      <div class="duyen-sec-title">🧘 Đạo hữu đang trong chùa</div>
+      <div class="duyen-sec-title">🧘 Chọn đạo hữu để nên duyên</div>
       <div class="duyen-list" id="duyenList">
         <div class="duyen-empty">Chưa có ai khác trong chùa</div>
       </div>
@@ -290,12 +298,12 @@
   <script src="/vendor/gsap.min.js"></script>
   <script src="/js/vendor/firebase-app-compat.js"></script>
   <script src="/js/vendor/firebase-database-compat.js"></script>
-  <script src="/js/firebase-config.js?v=14"></script>
+  <script src="/js/firebase-config.js?v=15"></script>
   <script src="/js/vendor/mqtt.min.js"></script>
-  <script src="/js/presence.js?v=14"></script>
-  <script src="/js/standalone.js?v=14"></script>
-  <script src="/js/audio.js?v=14"></script>
-  <script type="module" src="/js/app3d.js?v=14"></script>
+  <script src="/js/presence.js?v=15"></script>
+  <script src="/js/standalone.js?v=15"></script>
+  <script src="/js/audio.js?v=15"></script>
+  <script type="module" src="/js/app3d.js?v=15"></script>
 </body>
 
 </html>
