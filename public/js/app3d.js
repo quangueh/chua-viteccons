@@ -1374,6 +1374,14 @@ import { makeDevotee } from './chars3d.js';
     const t = Date.now();
     if (t - lastChatSend < 1500) return;
     lastChatSend = t;
+    if (typeof dmTab !== 'undefined' && dmTab) { // tab Riêng: chat riêng qua kênh duyên
+      const bond = window.TempleNet.bond || null;
+      if (!bond) return;
+      window.TempleNet.sendDm(text);
+      if (typeof appendDm === 'function') appendDm({ user: sessionStorage.getItem('chua_vt_name') || 'Bạn', uniqueId: window.TempleNet.sid, text, ts: t });
+      chatInput.value = '';
+      return;
+    }
     recentOwn.push(text);
     if (recentOwn.length > 10) recentOwn.shift();
     window.TempleNet.sendChat(text);
@@ -1403,6 +1411,148 @@ import { makeDevotee } from './chars3d.js';
   });
   // mặc định thu gọn cho gọn màn — có tin mới sẽ hiện badge
   chatPanel?.classList.add('collapsed');
+
+  // ── CẦU DUYÊN — trao duyên → chat riêng (F5 mất sạch phía client) ──
+  const tabPublic = document.getElementById('tabChatPublic');
+  const tabDmBtn = document.getElementById('tabChatDm');
+  const dmMsgs = document.getElementById('dmMsgs');
+  const dmBadge = document.getElementById('dmBadge');
+  const dmPartnerLine = document.getElementById('dmPartnerLine');
+  const dmPartnerName = document.getElementById('dmPartnerName');
+  const duyenModal = document.getElementById('duyenModal');
+  const duyenList = document.getElementById('duyenList');
+  const duyenReqBox = document.getElementById('duyenReqBox');
+  const duyenReqList = document.getElementById('duyenReqList');
+  const duyenBondBox = document.getElementById('duyenBondBox');
+  const duyenBondName = document.getElementById('duyenBondName');
+  let dmUnread = 0;
+  let dmTab = false;
+  let duyenReqs = [];
+
+  const bumpDmUnread = () => {
+    dmUnread++;
+    if (dmBadge) { dmBadge.textContent = String(dmUnread); dmBadge.hidden = false; }
+  };
+  const appendDm = (m) => {
+    if (!dmMsgs) return;
+    const row = document.createElement('div');
+    const mine = m.uniqueId && m.uniqueId === (window.TempleNet?.sid || '');
+    row.className = 'chat-msg' + (mine ? ' mine' : '');
+    const d = new Date(m.ts || Date.now());
+    const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    row.innerHTML = `<span class="chat-name" style="color:${chatNameColor(m.uniqueId)}">${escapeHtml(m.user || 'Đạo Hữu')}</span><span>${escapeHtml(m.text || '')}</span><span class="chat-time">${hh}</span>`;
+    dmMsgs.appendChild(row);
+    if (mine || (dmTab && !chatPanel?.classList.contains('collapsed'))) {
+      dmMsgs.scrollTop = dmMsgs.scrollHeight;
+    } else bumpDmUnread();
+  };
+  const currentBond = () => window.TempleNet?.bond || null;
+  const setChatTab = (dm) => {
+    dmTab = dm;
+    tabPublic?.classList.toggle('active', !dm);
+    tabDmBtn?.classList.toggle('active', dm);
+    if (chatMsgs) chatMsgs.hidden = dm;
+    if (dmMsgs) dmMsgs.hidden = !dm;
+    const bond = currentBond();
+    if (dmPartnerLine) dmPartnerLine.hidden = !(dm && bond);
+    if (chatInput) chatInput.placeholder = dm
+      ? (bond ? `Nhắn riêng với ${bond.name || 'Đạo Hữu'}...` : 'Chưa có duyên — bấm 💞 trước')
+      : 'Nhắn gì đó...';
+    if (dm) {
+      dmUnread = 0;
+      if (dmBadge) dmBadge.hidden = true;
+      renderDmEmpty();
+      if (dmMsgs) dmMsgs.scrollTop = dmMsgs.scrollHeight;
+    }
+  };
+  const renderDmEmpty = () => {
+    if (!dmMsgs) return;
+    if (!currentBond() && !dmMsgs.querySelector('.chat-msg')) {
+      dmMsgs.innerHTML = `<div class="chat-empty">Chưa kết duyên — bấm 💞 để trao duyên với đạo hữu đang trong chùa</div>`;
+    }
+  };
+  bind('tabChatPublic', () => setChatTab(false));
+  bind('tabChatDm', () => setChatTab(true));
+
+  // modal cầu duyên: danh sách đạo hữu online + lời trao duyên đến
+  const renderDuyenModal = () => {
+    const bond = currentBond();
+    if (duyenBondBox) duyenBondBox.hidden = !bond;
+    if (duyenBondName && bond) duyenBondName.textContent = bond.name || 'Đạo Hữu';
+    if (duyenReqBox) duyenReqBox.hidden = duyenReqs.length === 0;
+    if (duyenReqList) {
+      duyenReqList.innerHTML = '';
+      duyenReqs.forEach((r) => {
+        const row = document.createElement('div');
+        row.className = 'duyen-row';
+        row.innerHTML = `<span class="duyen-name">${escapeHtml(r.name || 'Thí Chủ')}</span>`;
+        const ok = document.createElement('button');
+        ok.className = 'duyen-btn accept';
+        ok.textContent = 'Đồng Ý';
+        ok.onclick = () => { window.TempleNet?.respondDuyen(r.sid, true); };
+        const no = document.createElement('button');
+        no.className = 'duyen-btn decline';
+        no.textContent = 'Từ Chối';
+        no.onclick = () => { window.TempleNet?.respondDuyen(r.sid, false); };
+        row.appendChild(ok);
+        row.appendChild(no);
+        duyenReqList.appendChild(row);
+      });
+    }
+    if (duyenList) {
+      duyenList.innerHTML = '';
+      const others = (window.TempleNet?.roster()?.people || []).filter(
+        (p) => p.sid !== window.TempleNet?.sid && p.name);
+      if (others.length === 0) {
+        duyenList.innerHTML = `<div class="duyen-empty">Chưa có ai khác trong chùa</div>`;
+      } else {
+        others.forEach((p) => {
+          const row = document.createElement('div');
+          row.className = 'duyen-row';
+          row.innerHTML = `<span class="duyen-name">${escapeHtml(p.name)}</span><span class="duyen-seat">${p.seat >= 0 ? 'chiếu ' + (p.seat + 1) : 'đứng'}</span>`;
+          const btn = document.createElement('button');
+          btn.className = 'duyen-btn';
+          btn.textContent = bond ? 'Đã có duyên' : 'Trao Duyên';
+          btn.disabled = !!bond;
+          btn.onclick = () => {
+            window.TempleNet?.requestDuyen(p.sid);
+            btn.textContent = 'Đang chờ…';
+            btn.disabled = true;
+          };
+          row.appendChild(btn);
+          duyenList.appendChild(row);
+        });
+      }
+    }
+  };
+  const openDuyen = () => { renderDuyenModal(); if (duyenModal) duyenModal.hidden = false; };
+  bind('btnDuyen', openDuyen);
+  bind('btnCloseDuyen', () => { if (duyenModal) duyenModal.hidden = true; });
+  const endDuyen = () => { window.TempleNet?.endDuyen(); };
+  bind('btnEndDuyen', endDuyen);
+  bind('btnEndDuyen2', endDuyen);
+
+  if (window.TempleNet) {
+    window.TempleNet.onDuyenReq = (reqs) => {
+      duyenReqs = reqs || [];
+      document.getElementById('btnDuyen')?.classList.toggle('has-req', duyenReqs.length > 0);
+      if (duyenModal && !duyenModal.hidden) renderDuyenModal();
+    };
+    window.TempleNet.onBond = (b) => {
+      if (b) {
+        if (dmPartnerName) dmPartnerName.textContent = b.name || 'Đạo Hữu';
+        toast(`💞 Đã kết duyên với ${b.name || 'Đạo Hữu'} — chat riêng ở tab Riêng`);
+        setChatTab(true);
+      } else {
+        setChatTab(false);
+        renderDmEmpty();
+      }
+      if (duyenModal && !duyenModal.hidden) renderDuyenModal();
+      if (dmPartnerLine) dmPartnerLine.hidden = !(dmTab && b);
+    };
+    window.TempleNet.onDm = (m) => appendDm(m);
+  }
+  renderDmEmpty();
 
   // ── Cổng pháp danh: chưa ghi danh → bắt buộc nhập tên trước khi vào chùa ──
   const gateInput = document.getElementById('gateNameInput');

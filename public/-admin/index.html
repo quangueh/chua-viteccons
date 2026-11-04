@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chùa Viteccons — Quản Trị Đạo Tràng</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: #14100d; color: #efe4cf;
+      font-family: 'Be Vietnam Pro', system-ui, sans-serif; font-size: 13px;
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 18px 20px 40px; }
+    h1 { font-size: 16px; color: #ffd98a; letter-spacing: .04em; margin: 0 0 4px; }
+    h1 small { font-size: 11px; color: rgba(239,228,207,.45); font-weight: 400; }
+    .gate {
+      max-width: 380px; margin: 14vh auto 0; padding: 28px 26px;
+      background: #241a12; border: 1px solid rgba(255,214,140,.25); border-radius: 16px;
+    }
+    .gate h2 { margin: 0 0 6px; font-size: 15px; color: #ffd98a; }
+    .gate p { margin: 0 0 14px; font-size: 11.5px; color: rgba(239,228,207,.6); line-height: 1.5; }
+    .gate input {
+      width: 100%; padding: 10px 12px; border-radius: 10px; font-size: 13px;
+      border: 1px solid rgba(255,214,140,.3); background: #0d0a07; color: #ffe9c0; outline: none;
+    }
+    .gate button {
+      width: 100%; margin-top: 10px; padding: 10px; border: none; border-radius: 10px;
+      background: linear-gradient(180deg, #ffd66e, #e8a224); color: #3a2200;
+      font-weight: 700; font-size: 13px; cursor: pointer;
+    }
+    .gate .err { display: none; margin-top: 8px; color: #ff8a8a; font-size: 11.5px; }
+    .toolbar { display: flex; gap: 8px; align-items: center; margin: 12px 0 16px; flex-wrap: wrap; }
+    .toolbar .spacer { flex: 1; }
+    button.act {
+      border: 1px solid rgba(255,214,140,.3); background: #241a12; color: #ffe9c0;
+      padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
+    }
+    button.act:hover { background: #33241a; }
+    button.act.danger { border-color: rgba(255,90,90,.45); color: #ffb0b0; }
+    button.act.danger:hover { background: rgba(255,90,90,.12); }
+    button.act.warn { border-color: rgba(255,199,0,.5); color: #ffd98a; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid .full { grid-column: 1 / -1; }
+    .card {
+      background: #1c1510; border: 1px solid rgba(255,214,140,.18); border-radius: 12px;
+      padding: 12px 14px; min-height: 60px;
+    }
+    .card h3 {
+      margin: 0 0 8px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+      color: rgba(255,214,140,.8);
+    }
+    .card h3 .count { color: rgba(239,228,207,.45); text-transform: none; letter-spacing: 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { text-align: left; color: rgba(239,228,207,.5); font-weight: 600; font-size: 10.5px; padding: 3px 6px 3px 0; }
+    td { padding: 4px 6px 4px 0; border-top: 1px solid rgba(255,214,140,.08); vertical-align: top; }
+    td .mini { font-size: 10px; color: rgba(239,228,207,.4); }
+    .tag { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 10.5px; background: rgba(255,214,140,.12); color: #ffd98a; }
+    .tag.pink { background: rgba(255,122,162,.16); color: #ffb9cd; }
+    .tag.green { background: rgba(120,220,140,.14); color: #a5e8b8; }
+    .empty { color: rgba(239,228,207,.35); font-style: italic; font-size: 11.5px; padding: 6px 0; }
+    .dmview { max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+    .dmrow { font-size: 12px; line-height: 1.45; }
+    .dmrow .who { font-weight: 700; color: #ffb9cd; margin-right: 5px; }
+    .dmrow .ts { color: rgba(239,228,207,.3); font-size: 10px; margin-left: 5px; }
+    .pairline { display: flex; align-items: center; gap: 6px; padding: 5px 0; border-top: 1px solid rgba(255,122,162,.12); }
+    .pairline .pk { flex: 1; }
+    .pairline .pk .mini { font-size: 10px; color: rgba(239,228,207,.4); }
+    .toast {
+      position: fixed; bottom: 18px; right: 18px; padding: 10px 14px; border-radius: 10px;
+      background: #2e2118; border: 1px solid rgba(255,214,140,.4); color: #ffe9c0;
+      font-size: 12px; display: none; z-index: 9;
+    }
+    .stat { display: inline-block; margin-right: 14px; font-size: 12px; }
+    .stat b { color: #ffd98a; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="gate" id="gate">
+    <h2>🔐 Quản Trị Đạo Tràng</h2>
+    <p>Khu vực hạn chế. Nhập mật khẩu quản trị để tiếp tục.<br />Mật khẩu được kiểm tra bằng hàm băm PBKDF2 — không lưu dạng rõ.</p>
+    <input type="password" id="pwInput" placeholder="Mật khẩu quản trị…" autocomplete="off" />
+    <button id="pwGo">Mở Bảng Điều Khiển</button>
+    <div class="err" id="pwErr">Sai mật khẩu.</div>
+  </div>
+
+  <div class="wrap" id="dash" hidden>
+    <h1>🔐 CHÙA VITECCONS — QUẢN TRỊ <small>temple/ trên Firebase RTDB</small></h1>
+    <div class="toolbar">
+      <span class="stat">👥 Online: <b id="stOnline">0</b></span>
+      <span class="stat">🪷 Chiếu: <b id="stSeats">0/48</b></span>
+      <span class="stat">⏳ Chờ: <b id="stQueue">0</b></span>
+      <span class="stat">💞 Duyên: <b id="stBonds">0</b></span>
+      <span class="stat">📨 Lời mời: <b id="stReqs">0</b></span>
+      <span class="stat">💬 Chat: <b id="stChat">0</b></span>
+      <span class="stat">🔢 appVersion: <b id="stVer">?</b></span>
+      <span class="spacer"></span>
+      <button class="act" id="btnRefresh">↻ Refresh</button>
+      <button class="act warn" id="btnBumpVer">⬆ Bump appVersion (đẩy mọi người vào lại)</button>
+      <button class="act danger" id="btnWipeEvents">🧹 Wipe Nhật Ký Sự Kiện</button>
+      <button class="act danger" id="btnWipeChat">🧹 Wipe Chat Chung</button>
+      <button class="act" id="btnLogout">Đăng Xuất</button>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <h3>👥 Người Đang Online <span class="count" id="cUsers"></span></h3>
+        <div id="usersBox"></div>
+      </div>
+      <div class="card">
+        <h3>🪷 48 Chiếu <span class="count" id="cSeats"></span></h3>
+        <div id="seatsBox"></div>
+      </div>
+      <div class="card">
+        <h3>⏳ Hàng Chờ <span class="count" id="cQueue"></span></h3>
+        <div id="queueBox"></div>
+      </div>
+      <div class="card">
+        <h3>📨 Lời Trao Duyên Đang Chờ <span class="count" id="cReqs"></span></h3>
+        <div id="reqsBox"></div>
+      </div>
+      <div class="card full">
+        <h3>💞 Cặp Duyên & Tin Nhắn Riêng <span class="count" id="cBonds"></span></h3>
+        <div id="bondsBox"></div>
+        <div class="dmview" id="dmView" style="margin-top:8px"></div>
+      </div>
+      <div class="card full">
+        <h3>💬 Chat Chung <span class="count" id="cChat"></span></h3>
+        <div id="chatBox" class="dmview"></div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script src="/js/vendor/firebase-app-compat.js"></script>
+  <script src="/js/vendor/firebase-database-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+  <script>
+    // PBKDF2-SHA256 gate — chỉ có hàm băm+salt trong source, không có mật khẩu rõ.
+    const ADMIN_PBKDF2 = {
+      salt: '3a306cc9c04a0ec6a3d3cc9370596282',
+      iterations: 150000,
+      hash: 'bd634e3adbaf8e4cd5c2ff2dc36ace94eff4d75fb363bfc4fa2c5a08e4ec65af'
+    };
+    const hex = (buf) => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    const gate = document.getElementById('gate');
+    const dash = document.getElementById('dash');
+    const pwErr = document.getElementById('pwErr');
+    async function tryPw() {
+      const pw = document.getElementById('pwInput').value;
+      if (!pw) return;
+      const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+      const bits = await crypto.subtle.deriveBits(
+        { name: 'PBKDF2', salt: new TextEncoder().encode(ADMIN_PBKDF2.salt), iterations: ADMIN_PBKDF2.iterations, hash: 'SHA-256' },
+        key, 256);
+      if (hex(bits) === ADMIN_PBKDF2.hash) {
+        sessionStorage.setItem('cvtc_admin', '1');
+        open();
+      } else { pwErr.style.display = 'block'; }
+    }
+    document.getElementById('pwGo').onclick = tryPw;
+    document.getElementById('pwInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryPw(); });
+    function open() { gate.hidden = true; dash.hidden = false; start(); }
+    if (sessionStorage.getItem('cvtc_admin')) open();
+    document.getElementById('btnLogout').onclick = () => { sessionStorage.removeItem('cvtc_admin'); location.reload(); };
+
+    // ── Firebase ──
+    let db = null;
+    function start() {
+      if (db) return;
+      if (!window.FIREBASE_CONFIG || !window.firebase) { say('Thiếu cấu hình Firebase'); return; }
+      firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.database();
+      refresh();
+    }
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const fmtTs = (ts) => ts ? new Date(ts).toLocaleString('vi-VN', { hour12: false }) : '—';
+    function say(m) { const t = document.getElementById('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2600); }
+    const get = (p) => db.ref('temple/' + p).get().then((s) => s.val());
+
+    async function refresh() {
+      const [users, seats, reqs, bonds, dm, chat, ver] = await Promise.all([
+        get('users'), get('seats'), get('duyenReq'), get('bonds'), get('dm'), get('chat'), get('appVersion')
+      ]);
+      users_ = users || {}; seats_ = seats || {}; reqs_ = reqs || {}; bonds_ = bonds || {}; dm_ = dm || {}; chat_ = chat || {};
+      render(users_, seats_, reqs_, bonds_, dm_, chat_, ver);
+    }
+    let users_ = {}, seats_ = {}, reqs_ = {}, bonds_ = {}, dm_ = {}, chat_ = {};
+
+    function render(users, seats, reqs, bonds, dm, chat, ver) {
+      const uArr = Object.entries(users).map(([sid, v]) => ({ sid, ...v }));
+      const qArr = uArr.filter((u) => u.enqTs && !(Number.isInteger(u.seat) && u.seat >= 0)).sort((a, b) => a.enqTs - b.enqTs);
+      const seatArr = Object.entries(seats).map(([i, v]) => ({ i: +i, ...v })).sort((a, b) => a.i - b.i);
+      const reqArr = Object.entries(reqs).flatMap(([to, m]) => Object.entries(m || {}).map(([from, v]) => ({ to, from, ...v })));
+      const bondArr = Object.entries(bonds).map(([pk, v]) => ({ pk, ...v }));
+      const dmCount = Object.keys(dm).length;
+      const chatArr = Object.entries(chat || {}).map(([k, v]) => ({ k, ...v }));
+
+      document.getElementById('stOnline').textContent = uArr.length;
+      document.getElementById('stSeats').textContent = seatArr.length + '/48';
+      document.getElementById('stQueue').textContent = qArr.length;
+      document.getElementById('stBonds').textContent = bondArr.length;
+      document.getElementById('stReqs').textContent = reqArr.length;
+      document.getElementById('stChat').textContent = chatArr.length;
+      document.getElementById('stVer').textContent = ver ?? '—';
+      document.getElementById('cUsers').textContent = uArr.length + ' record';
+      document.getElementById('cSeats').textContent = seatArr.length + ' giữ';
+      document.getElementById('cQueue').textContent = qArr.length + ' chờ';
+      document.getElementById('cReqs').textContent = reqArr.length + ' chờ';
+      document.getElementById('cBonds').textContent = bondArr.length + ' cặp • ' + dmCount + ' thread DM';
+      document.getElementById('cChat').textContent = chatArr.length + ' tin';
+
+      document.getElementById('usersBox').innerHTML = uArr.length === 0 ? '<div class="empty">Trống</div>' :
+        '<table>' + uArr.map((u) =>
+          `<tr><td><b>${esc(u.name || '—')}</b><div class="mini">${esc(u.sid)}</div></td>
+           <td>${Number.isInteger(u.seat) && u.seat >= 0 ? `<span class="tag green">chiếu ${u.seat + 1}</span>` : (u.enqTs ? '<span class="tag">chờ</span>' : '<span class="tag">đứng</span>')}</td>
+           <td class="mini">${fmtTs(u.ts)}</td>
+           <td><button class="act danger" onclick="kick('${esc(u.sid)}', ${Number.isInteger(u.seat) ? u.seat : -1})">Kick</button></td></tr>`
+        ).join('') + '</table>';
+
+      document.getElementById('seatsBox').innerHTML = seatArr.length === 0 ? '<div class="empty">Trống hết</div>' :
+        '<table>' + seatArr.map((s) =>
+          `<tr><td><b>chiếu ${s.i + 1}</b></td><td>${esc(s.name || '—')}<div class="mini">${esc(s.sid || '')}</div></td>
+           <td class="mini">${fmtTs(s.ts)}</td>
+           <td><button class="act danger" onclick="releaseSeat(${s.i})">Nhả chiếu</button></td></tr>`
+        ).join('') + '</table>';
+
+      document.getElementById('queueBox').innerHTML = qArr.length === 0 ? '<div class="empty">Không ai chờ</div>' :
+        '<table>' + qArr.map((u, i) =>
+          `<tr><td>#${i + 1}</td><td><b>${esc(u.name || '—')}</b><div class="mini">${esc(u.sid)}</div></td><td class="mini">${fmtTs(u.enqTs)}</td></tr>`
+        ).join('') + '</table>';
+
+      document.getElementById('reqsBox').innerHTML = reqArr.length === 0 ? '<div class="empty">Không có lời mời chờ</div>' :
+        '<table>' + reqArr.map((r) =>
+          `<tr><td><b>${esc(r.name || '—')}</b> → <span class="mini">${esc(r.to)}</span></td>
+           <td class="mini">${fmtTs(r.ts)}</td>
+           <td><button class="act danger" onclick="delReq('${esc(r.to)}','${esc(r.from)}')">Xóa</button></td></tr>`
+        ).join('') + '</table>';
+
+      const bBox = document.getElementById('bondsBox');
+      const allPairs = new Set([...bondArr.map((b) => b.pk), ...Object.keys(dm)]);
+      bBox.innerHTML = allPairs.size === 0 ? '<div class="empty">Chưa có cặp duyên nào</div>' :
+        [...allPairs].map((pk) => {
+          const b = bonds[pk];
+          const msgs = dm[pk] ? Object.keys(dm[pk]).length : 0;
+          const live = !!b;
+          return `<div class="pairline"><span class="pk">
+              ${live ? `<span class="tag pink">đang kết</span>` : '<span class="tag">đã chia</span>'}
+              <b>${esc(b ? nameOf(b.a) : '?')} ↔ ${esc(b ? nameOf(b.b) : '?')}</b>
+              <div class="mini">${esc(pk)} • ${msgs} tin DM ${live ? '• từ ' + fmtTs(b.ts) : ''}</div></span>
+              <button class="act" onclick="viewDm('${esc(pk)}')">Đọc DM (${msgs})</button>
+              ${live ? `<button class="act danger" onclick="delBond('${esc(pk)}')">Chia Duyên</button>` : ''}
+              <button class="act danger" onclick="wipeDm('${esc(pk)}')">Wipe DM</button>
+            </div>`;
+        }).join('');
+
+      document.getElementById('chatBox').innerHTML = chatArr.length === 0 ? '<div class="empty">Trống</div>' :
+        chatArr.map((m) => `<div class="dmrow"><span class="who">${esc(m.name || 'Thí Chủ')}</span>${esc(m.text || '')}<span class="ts">${fmtTs(m.ts)}</span></div>`).join('');
+    }
+    const nameOf = (sid) => (users_[sid] && users_[sid].name) || sid;
+    function viewDm(pk) {
+      const msgs = Object.entries(dm_[pk] || {}).map(([k, v]) => ({ k, ...v })).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+      document.getElementById('dmView').innerHTML =
+        `<div class="mini" style="color:#ffb9cd;margin-bottom:4px">temple/dm/${esc(pk)} — ${msgs.length} tin (admin đọc được, client F5 mất sạch)</div>` +
+        (msgs.length === 0 ? '<div class="empty">Trống</div>' :
+          msgs.map((m) => `<div class="dmrow"><span class="who">${esc(m.name || nameOf(m.from))}</span>${esc(m.text || '')}<span class="ts">${fmtTs(m.ts)}</span></div>`).join(''));
+    }
+
+    // ── Controls ──
+    window.kick = (sid, seat) => {
+      if (!confirm(`Kick ${nameOf(sid)} (${sid})?`)) return;
+      const jobs = [db.ref('temple/users/' + sid).remove(), db.ref('temple/duyenReq/' + sid).remove()];
+      if (seat >= 0) jobs.push(db.ref('temple/seats/' + seat).remove());
+      Promise.all(jobs).then(() => { say('Đã kick'); refresh(); }).catch((e) => say('Lỗi: ' + e));
+    };
+    window.releaseSeat = (i) => {
+      if (!confirm(`Nhả chiếu ${i + 1}?`)) return;
+      db.ref('temple/seats/' + i).remove().then(() => { say('Đã nhả chiếu'); refresh(); }).catch((e) => say('Lỗi: ' + e));
+    };
+    window.delReq = (to, from) => {
+      db.ref(`temple/duyenReq/${to}/${from}`).remove().then(() => { say('Đã xóa lời mời'); refresh(); }).catch((e) => say('Lỗi: ' + e));
+    };
+    window.delBond = (pk) => {
+      if (!confirm(`Chia duyên ${pk}?`)) return;
+      db.ref('temple/bonds/' + pk).remove().then(() => { say('Đã chia duyên'); refresh(); }).catch((e) => say('Lỗi: ' + e));
+    };
+    window.wipeDm = (pk) => {
+      if (!confirm(`Wipe toàn bộ DM của ${pk}? (xóa cả bản admin)`)) return;
+      db.ref('temple/dm/' + pk).remove().then(() => { say('Đã wipe DM'); refresh(); }).catch((e) => say('Lỗi: ' + e));
+    };
+    document.getElementById('btnRefresh').onclick = refresh;
+    document.getElementById('btnBumpVer').onclick = async () => {
+      if (!confirm('Bump appVersion — mọi client sẽ tự reload (giữ ghế)?')) return;
+      const cur = (await get('appVersion')) | 0;
+      db.ref('temple/appVersion').set(cur + 1).then(() => { say('appVersion = ' + (cur + 1)); refresh(); }).catch((e) => say('Lỗi: ' + e));
+    };
+    document.getElementById('btnWipeEvents').onclick = () => {
+      if (!confirm('Wipe TOÀN BỘ nhật ký sự kiện temple/events?')) return;
+      db.ref('temple/events').remove().then(() => { say('Đã wipe events'); }).catch((e) => say('Lỗi: ' + e));
+    };
+    document.getElementById('btnWipeChat').onclick = () => {
+      if (!confirm('Wipe TOÀN BỘ chat chung temple/chat?')) return;
+      db.ref('temple/chat').remove().then(() => { say('Đã wipe chat'); refresh(); }).catch((e) => say('Lỗi: ' + e));
+    };
+  </script>
+</body>
+</html>

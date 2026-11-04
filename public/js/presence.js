@@ -67,6 +67,11 @@ const MeshNet = function () {
   let onRitualCb = null;
   let onSeatLostCb = null;
   let onChatCb = null;
+  let onDuyenReqCb = null;
+  let onBondCb = null;
+  let onDmCb = null;
+  const duyenIn = new Map(); // lời trao duyên đến mình
+  let bond = null;           // {sid, name}
   let ws = null;
   let hbTimer = null;
   let pruneTimer = null;
@@ -262,6 +267,11 @@ const MeshNet = function () {
         // người đó thoát web thật → xóa ngay khỏi sơ đồ, nhả chiếu tức thì
         noteSeatChange(p, -1, t);
         peers.delete(m.sid);
+        duyenIn.delete(m.sid);
+        if (bond && bond.sid === m.sid) {
+          bond = null;
+          if (typeof onBondCb === 'function') onBondCb(null);
+        }
         markDirty();
         break;
       }
@@ -274,6 +284,34 @@ const MeshNet = function () {
             ts: m.ts || t,
             remote: true
           });
+        }
+        break;
+      }
+      // ── cầu duyên qua mesh ──
+      case 'dureq': {
+        if (m.to === sid) {
+          duyenIn.set(m.sid, { sid: m.sid, name: (m.name || 'Thí Chủ').slice(0, 40), ts: t });
+          if (typeof onDuyenReqCb === 'function') onDuyenReqCb([...duyenIn.values()]);
+        }
+        break;
+      }
+      case 'duacc': {
+        if (m.to === sid) {
+          bond = { sid: m.sid, name: (m.an || 'Đạo Hữu').slice(0, 40) };
+          if (typeof onBondCb === 'function') onBondCb({ sid: bond.sid, name: bond.name });
+        }
+        break;
+      }
+      case 'dubye': {
+        if (m.to === sid && bond) {
+          bond = null;
+          if (typeof onBondCb === 'function') onBondCb(null);
+        }
+        break;
+      }
+      case 'dm': {
+        if (m.to === sid && typeof onDmCb === 'function') {
+          onDmCb({ user: m.name || 'Đạo Hữu', uniqueId: m.sid, text: String(m.text || '').slice(0, 140), ts: m.ts || t, remote: true });
         }
         break;
       }
@@ -477,6 +515,33 @@ const MeshNet = function () {
     pub({ t: 'chat', name: me.name, text: String(text || '').slice(0, 140), ts: now() });
   }
 
+  // ── cầu duyên qua mesh ──
+  function requestDuyen(toSid) {
+    if (!me.name || !toSid || toSid === sid) return;
+    pub({ t: 'dureq', to: toSid, name: me.name });
+  }
+  function respondDuyen(fromSid, accept) {
+    duyenIn.delete(fromSid);
+    if (accept) {
+      const p = peers.get(fromSid);
+      bond = { sid: fromSid, name: p?.name || 'Đạo Hữu' };
+      pub({ t: 'duacc', to: fromSid, an: me.name });
+      if (typeof onBondCb === 'function') onBondCb({ sid: bond.sid, name: bond.name });
+    }
+    if (typeof onDuyenReqCb === 'function') onDuyenReqCb([...duyenIn.values()]);
+  }
+  function endDuyen() {
+    if (!bond) return;
+    pub({ t: 'dubye', to: bond.sid });
+    bond = null;
+    if (typeof onBondCb === 'function') onBondCb(null);
+  }
+  function sendDm(text) {
+    const clean = String(text || '').trim().slice(0, 140);
+    if (!clean || !bond) return;
+    pub({ t: 'dm', to: bond.sid, name: me.name, text: clean });
+  }
+
   function start() {
     if (started) return;
     started = true;
@@ -533,7 +598,15 @@ const MeshNet = function () {
     set onChange(cb) { onChangeCb = cb; },
     set onRitual(cb) { onRitualCb = cb; },
     set onSeatLost(cb) { onSeatLostCb = cb; },
-    set onChat(cb) { onChatCb = cb; }
+    set onChat(cb) { onChatCb = cb; },
+    set onDuyenReq(cb) { onDuyenReqCb = cb; },
+    set onBond(cb) { onBondCb = cb; },
+    set onDm(cb) { onDmCb = cb; },
+    requestDuyen,
+    respondDuyen,
+    endDuyen,
+    sendDm,
+    get bond() { return bond; }
   };
 };
 
@@ -558,7 +631,10 @@ const FirebaseNet = function () {
   const recentRits = [];
   const seenRits = new Set();
   let onChangeCb = null, onRitualCb = null, onSeatLostCb = null, onChatCb = null;
+  let onDuyenReqCb = null, onBondCb = null, onDmCb = null;
   let db = null, myRef = null, seatsRef = null, eventsRef = null, chatRef = null;
+  let duyenReqsRef = null, bondsRef = null, dmRef = null;
+  let bond = null; // {sid, name, pairKey} — cặp duyên hiện tại
   let started = false, dead = false, up = false;
 
   const APP_VERSION = 10; // khớp ?v= trong index.html — Firebase temple/appVersion lớn hơn thì tự reload
@@ -689,6 +765,70 @@ const FirebaseNet = function () {
     } catch (_) { }
   }
 
+  // ── Cầu duyên: gửi lời / chấp nhận / chat riêng ─────────────────────────
+  const pairKeyOf = (a, b) => [a, b].sort().join('__');
+
+  function requestDuyen(toSid) {
+    if (!me.name || !toSid || toSid === sid || dead) return;
+    try {
+      db.ref('temple/duyenReq/' + toSid + '/' + sid).set({
+        name: me.name, ts: firebase.database.ServerValue.TIMESTAMP
+      });
+    } catch (_) { }
+  }
+
+  function respondDuyen(fromSid, accept) {
+    if (!duyenReqsRef || !fromSid || dead) return;
+    try {
+      duyenReqsRef.child(fromSid).remove();
+      if (accept) {
+        bondsRef.child(pairKeyOf(sid, fromSid)).set({
+          a: sid, b: fromSid, an: me.name, ts: firebase.database.ServerValue.TIMESTAMP
+        });
+      }
+    } catch (_) { }
+  }
+
+  function endDuyen() {
+    if (!bond || !bondsRef) return;
+    try { bondsRef.child(bond.pairKey).remove(); } catch (_) { }
+  }
+
+  function applyBond(key, v) {
+    if (!key || !v || (v.a !== sid && v.b !== sid)) {
+      if (bond) {
+        bond = null;
+        try { dmRef && dmRef.off(); } catch (_) { }
+        dmRef = null;
+        if (typeof onBondCb === 'function') onBondCb(null);
+      }
+      return;
+    }
+    if (bond && bond.pairKey === key) return;
+    const partnerSid = v.a === sid ? v.b : v.a;
+    const p = peers.get(partnerSid);
+    bond = { sid: partnerSid, name: p?.name || 'Đạo Hữu', pairKey: key };
+    try { bondsRef.child(key).onDisconnect().remove(); } catch (_) { }
+    // DM: CHỈ nhận tin mới từ lúc kết nối — F5/trở lại không load lịch sử (mất sạch phía client)
+    dmRef = db.ref('temple/dm/' + key);
+    dmRef.orderByChild('ts').startAt(now()).on('child_added', (snap) => {
+      const m = snap.val();
+      if (!m || !m.from || m.from === sid) return;
+      if (typeof onDmCb === 'function') {
+        onDmCb({ user: m.name || 'Đạo Hữu', uniqueId: m.from, text: String(m.text || '').slice(0, 140), ts: m.ts || now(), remote: true });
+      }
+    });
+    if (typeof onBondCb === 'function') onBondCb({ sid: partnerSid, name: bond.name });
+  }
+
+  function sendDm(text) {
+    const clean = String(text || '').trim().slice(0, 140);
+    if (!clean || !dmRef || !bond || dead) return;
+    try {
+      dmRef.push({ from: sid, name: me.name, text: clean, ts: firebase.database.ServerValue.TIMESTAMP });
+    } catch (_) { }
+  }
+
   function sendRitual(evt) {
     if (!eventsRef || dead) return;
     try {
@@ -715,6 +855,8 @@ const FirebaseNet = function () {
       seatsRef = db.ref('temple/seats');
       eventsRef = db.ref('temple/events');
       chatRef = db.ref('temple/chat');
+      duyenReqsRef = db.ref('temple/duyenReq/' + sid);
+      bondsRef = db.ref('temple/bonds');
 
       // Bump version từ xa: temple/appVersion > bản đang chạy → giữ chiếu + reload lấy code mới
       db.ref('temple/appVersion').on('value', (snap) => {
@@ -732,6 +874,8 @@ const FirebaseNet = function () {
           up = true;
           try {
             myRef.onDisconnect().remove();           // server tự xóa mình khi rớt mạng
+            duyenReqsRef.onDisconnect().remove();    // + lời mời duyên đến mình
+            if (bond) bondsRef.child(bond.pairKey).onDisconnect().remove(); // + cặp duyên
           } catch (_) { }
           // claim lúc chưa kết nối → giờ đăng ký thật bằng transaction
           if (me.seat >= 0) {
@@ -830,6 +974,22 @@ const FirebaseNet = function () {
           });
         }
       });
+      // lời trao duyên đến mình
+      duyenReqsRef.on('value', (snap) => {
+        const reqs = [];
+        snap.forEach((c) => { const v = c.val(); if (v && v.name) reqs.push({ sid: c.key, name: String(v.name).slice(0, 40), ts: v.ts || 0 }); });
+        reqs.sort((a, b) => a.ts - b.ts);
+        if (typeof onDuyenReqCb === 'function') onDuyenReqCb(reqs);
+      });
+      // cặp duyên có mình
+      bondsRef.on('value', (snap) => {
+        let found = null, foundKey = null;
+        snap.forEach((c) => {
+          const v = c.val();
+          if (v && (v.a === sid || v.b === sid)) { found = v; foundKey = c.key; }
+        });
+        applyBond(foundKey, found);
+      });
       window.addEventListener('pagehide', () => leave());
     } catch (_) { dead = true; }
   }
@@ -852,7 +1012,15 @@ const FirebaseNet = function () {
     set onChange(cb) { onChangeCb = cb; },
     set onRitual(cb) { onRitualCb = cb; },
     set onSeatLost(cb) { onSeatLostCb = cb; },
-    set onChat(cb) { onChatCb = cb; }
+    set onChat(cb) { onChatCb = cb; },
+    set onDuyenReq(cb) { onDuyenReqCb = cb; },
+    set onBond(cb) { onBondCb = cb; },
+    set onDm(cb) { onDmCb = cb; },
+    requestDuyen,
+    respondDuyen,
+    endDuyen,
+    sendDm,
+    get bond() { return bond; }
   };
 };
 
@@ -868,12 +1036,15 @@ window.TempleNet = (function () {
   let eng = fb || mesh;
   // FB không kết nối được trong 10s → chuyển hẳn sang mesh
   let fbTimer = null;
-  const cbs = { onChange: null, onRitual: null, onSeatLost: null, onChat: null };
+  const cbs = { onChange: null, onRitual: null, onSeatLost: null, onChat: null, onDuyenReq: null, onBond: null, onDm: null };
   function bind(e) {
     e.onChange = () => { if (eng === e && cbs.onChange) cbs.onChange(); };
     e.onRitual = (ev) => { if (eng === e && cbs.onRitual) cbs.onRitual(ev); };
     e.onSeatLost = (s) => { if (eng === e && cbs.onSeatLost) cbs.onSeatLost(s); };
     e.onChat = (m) => { if (eng === e && cbs.onChat) cbs.onChat(m); };
+    e.onDuyenReq = (r) => { if (eng === e && cbs.onDuyenReq) cbs.onDuyenReq(r); };
+    e.onBond = (b) => { if (eng === e && cbs.onBond) cbs.onBond(b); };
+    e.onDm = (m) => { if (eng === e && cbs.onDm) cbs.onDm(m); };
   }
   bind(eng);
   function start() {
@@ -903,9 +1074,17 @@ window.TempleNet = (function () {
     sendRitual: (e) => call('sendRitual', e),
     setMerit: (m) => call('setMerit', m),
     sendChat: (t) => call('sendChat', t),
+    requestDuyen: (s) => call('requestDuyen', s),
+    respondDuyen: (s, ok) => call('respondDuyen', s, ok),
+    endDuyen: () => call('endDuyen'),
+    sendDm: (t) => call('sendDm', t),
+    get bond() { return eng.bond; },
     set onChange(cb) { cbs.onChange = cb; },
     set onRitual(cb) { cbs.onRitual = cb; },
     set onSeatLost(cb) { cbs.onSeatLost = cb; },
-    set onChat(cb) { cbs.onChat = cb; }
+    set onChat(cb) { cbs.onChat = cb; },
+    set onDuyenReq(cb) { cbs.onDuyenReq = cb; },
+    set onBond(cb) { cbs.onBond = cb; },
+    set onDm(cb) { cbs.onDm = cb; }
   };
 })();

@@ -216,10 +216,17 @@
       </div>
     </aside>
 
-    <!-- Khung chat realtime — mọi người trò chuyện qua kênh chung -->
+    <!-- Khung chat realtime — kênh chung + chat riêng sau khi trao duyên -->
     <div class="chat-panel" id="chatPanel">
       <div class="chat-head" id="chatHead">
         <span class="chat-title">💬 Trò Chuyện</span>
+        <div class="chat-tabs">
+          <button class="chat-tab active" id="tabChatPublic">Chung</button>
+          <button class="chat-tab" id="tabChatDm">Riêng
+            <span class="chat-badge" id="dmBadge" hidden>0</span>
+          </button>
+        </div>
+        <button class="chat-duyen-btn" id="btnDuyen" title="Cầu duyên — trò chuyện riêng với đạo hữu">💞</button>
         <span class="chat-badge" id="chatBadge" hidden>0</span>
         <button class="chat-toggle" id="btnChatToggle" title="Thu gọn">–</button>
       </div>
@@ -227,12 +234,40 @@
         <div class="chat-msgs" id="chatMsgs">
           <div class="chat-empty">Chưa có tin nhắn — chào mọi người đi 🙏</div>
         </div>
+        <div class="chat-msgs dm-msgs" id="dmMsgs" hidden></div>
+        <div class="dm-partner-line" id="dmPartnerLine" hidden>
+          💞 Chat riêng với <b id="dmPartnerName"></b>
+          <button class="dm-end-btn" id="btnEndDuyen" title="Chia duyên">✕</button>
+          <div class="dm-note">Tin nhắn riêng chỉ tồn tại trong phiên này — F5 sẽ mất hết</div>
+        </div>
         <div class="chat-input-row">
           <input type="text" id="chatInput" class="chat-input" maxlength="140" placeholder="Nhắn gì đó..."
             autocomplete="off" />
           <button class="chat-send" id="btnChatSend" title="Gửi">➤</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL CẦU DUYÊN — chọn đạo hữu để trao duyên -->
+  <div class="duyen-modal-overlay" id="duyenModal" hidden>
+    <div class="duyen-panel glass-panel">
+      <div class="duyen-title">💞 CẦU DUYÊN</div>
+      <div class="duyen-sub">Hai bên cùng đồng ý trao duyên sẽ có khung chat riêng.<br />Tin nhắn riêng mất hết khi tải
+        lại trang.</div>
+      <div class="duyen-bond-box" id="duyenBondBox" hidden>
+        💞 Đã kết duyên với <b id="duyenBondName"></b>
+        <button class="duyen-btn end" id="btnEndDuyen2">Chia Duyên</button>
+      </div>
+      <div class="duyen-req-box" id="duyenReqBox" hidden>
+        <div class="duyen-sec-title">📨 Lời trao duyên đến bạn</div>
+        <div id="duyenReqList"></div>
+      </div>
+      <div class="duyen-sec-title">🧘 Đạo hữu đang trong chùa</div>
+      <div class="duyen-list" id="duyenList">
+        <div class="duyen-empty">Chưa có ai khác trong chùa</div>
+      </div>
+      <button class="dock-btn seat-close" id="btnCloseDuyen">Đóng</button>
     </div>
   </div>
 
@@ -254,12 +289,12 @@
   <script src="/vendor/gsap.min.js"></script>
   <script src="/js/vendor/firebase-app-compat.js"></script>
   <script src="/js/vendor/firebase-database-compat.js"></script>
-  <script src="/js/firebase-config.js?v=12"></script>
+  <script src="/js/firebase-config.js?v=13"></script>
   <script src="/js/vendor/mqtt.min.js"></script>
-  <script src="/js/presence.js?v=12"></script>
-  <script src="/js/standalone.js?v=12"></script>
-  <script src="/js/audio.js?v=12"></script>
-  <script type="module" src="/js/app3d.js?v=12"></script>
+  <script src="/js/presence.js?v=13"></script>
+  <script src="/js/standalone.js?v=13"></script>
+  <script src="/js/audio.js?v=13"></script>
+  <script type="module" src="/js/app3d.js?v=13"></script>
 </body>
 
 </html>
