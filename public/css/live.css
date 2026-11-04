@@ -48,16 +48,17 @@ body.obs-mode .quick-dock {
 }
 
 /* ==========================================================================
-   KHUNG 9:16 CHUẨN TIKTOK LIVE (1080 x 1920 LOGICAL) — TỐI ƯU HÓA GPU COMPOSITOR
+   CHÁNH ĐIỆN FULL MÀN HÌNH NGANG (1920 x 1080 LOGICAL) — TỐI ƯU HÓA GPU COMPOSITOR
    ========================================================================== */
 .stage-wrapper {
   position: relative;
+  flex: 1;
   height: 96vh;
-  aspect-ratio: 9 / 16;
   border-radius: 22px;
   overflow: hidden;
   border: 2px solid rgba(244, 193, 80, 0.55);
-  background: #120403;
+  background: radial-gradient(ellipse 62% 58% at 50% 34%,
+      #5a2210 0%, #2c100a 48%, #150604 80%, #0e0302 100%);
   contain: layout paint style;
 }
 
@@ -67,15 +68,17 @@ body.obs-mode .stage-wrapper {
   border: none;
 }
 
-.stage-9x16 {
+.stage-wide {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 1080px;
-  height: 1920px;
-  transform-origin: top left;
+  top: 50%;
+  left: 50%;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: center center;
   overflow: hidden;
-  background: #120403;
+  /* Nen am chua trong khi anh nen tai ve -> khong bao gio bi "den thui" */
+  background: radial-gradient(ellipse 60% 55% at 50% 32%,
+      #6b2a10 0%, #3a1410 42%, #1a0705 78%, #0e0302 100%);
   contain: strict;
 }
 
@@ -83,8 +86,8 @@ body.obs-mode .stage-wrapper {
 .sanctuary-bg-img {
   position: absolute;
   inset: 0;
-  width: 1080px;
-  height: 1920px;
+  width: 1920px;
+  height: 1080px;
   object-fit: cover;
   object-position: center top;
   z-index: 1;
@@ -94,10 +97,10 @@ body.obs-mode .stage-wrapper {
 /* 1B. HỆ THỐNG HÀO QUANG ĐỨC PHẬT A DI ĐÀ — TỐI ƯU HÓA CPU (KHÔNG DÙNG FILTER:BLUR) */
 .buddha-halo-system {
   position: absolute;
-  left: 540px;
-  top: 260px;
-  width: 720px;
-  height: 720px;
+  left: 960px;
+  top: 268px;
+  width: 600px;
+  height: 600px;
   transform: translate3d(-50%, -50%, 0);
   z-index: 4;
   pointer-events: none;
@@ -203,10 +206,10 @@ body.obs-mode .stage-wrapper {
 /* Hào quang Đài Sen Vàng trên tay Đức Phật A Di Đà (x=540, y=502) */
 .lotus-hand-halo {
   position: absolute;
-  left: 540px;
-  top: 502px;
-  width: 190px;
-  height: 150px;
+  left: 960px;
+  top: 415px;
+  width: 150px;
+  height: 120px;
   transform: translate3d(-50%, -50%, 0);
   border-radius: 50%;
   background: radial-gradient(circle,
@@ -302,10 +305,10 @@ body.obs-mode .stage-wrapper {
    ========================================================================== */
 .sacred-light-beam {
   position: absolute;
-  left: 540px;
-  top: 485px;
+  left: 960px;
+  top: 420px;
   width: 110px;
-  height: 435px;
+  height: 310px;
   transform: translate3d(-50%, 0, 0);
   background: radial-gradient(ellipse 50% 50% at 50% 55%,
       rgba(255, 246, 200, 0.55) 0%,
@@ -324,11 +327,11 @@ body.obs-mode .stage-wrapper {
 
 .incense-burner-zone {
   position: absolute;
-  top: 790px;
+  top: 620px;
   left: 50%;
   transform: translateX(-50%);
   width: 190px;
-  height: 220px;
+  height: 160px;
   z-index: 9;
   cursor: pointer;
 }
@@ -382,18 +385,18 @@ body.obs-mode .stage-wrapper {
 }
 
 .bell-hotspot {
-  top: 955px;
-  left: 34px;
+  top: 700px;
+  left: 36px;
 }
 
 .woodfish-hotspot {
-  top: 955px;
-  right: 34px;
+  top: 700px;
+  right: 36px;
 }
 
 .fortune-hotspot {
-  top: 895px;
-  right: 34px;
+  top: 640px;
+  right: 36px;
 }
 
 /* ==========================================================================
@@ -408,8 +411,8 @@ body.obs-mode .stage-wrapper {
 /* Chủ lễ đang hành lễ ngay chính giữa trước lư hương đồng */
 .central-worshipper {
   position: absolute;
-  left: 540px;
-  top: 970px;
+  left: 960px;
+  top: 800px;
   transform: translate3d(-50%, 0, 0);
   display: flex;
   flex-direction: column;
@@ -425,7 +428,7 @@ body.obs-mode .stage-wrapper {
 
 @keyframes centralWalkUpCarpet {
   0% {
-    transform: translate3d(-50%, 490px, 0) scale(1.06);
+    transform: translate3d(-50%, 235px, 0) scale(1.12);
   }
 
   100% {
@@ -674,8 +677,8 @@ body.obs-mode .stage-wrapper {
 
 .carpet-walker {
   position: absolute;
-  left: 540px;
-  top: 1665px;
+  left: 960px;
+  top: 1050px;
   will-change: transform, opacity;
   display: flex;
   flex-direction: column;
@@ -700,12 +703,12 @@ body.obs-mode .stage-wrapper {
   }
 
   92% {
-    transform: translate3d(-50%, calc(-100% - 495px), 0) scale(0.84);
+    transform: translate3d(-50%, calc(-100% - 240px), 0) scale(0.86);
     opacity: 1;
   }
 
   100% {
-    transform: translate3d(-50%, calc(-100% - 510px), 0) scale(0.82);
+    transform: translate3d(-50%, calc(-100% - 255px), 0) scale(0.84);
     opacity: 0;
   }
 }
@@ -723,7 +726,7 @@ body.obs-mode .stage-wrapper {
 
 .sky-lantern {
   position: absolute;
-  bottom: 360px;
+  bottom: 190px;
   width: 260px;
   padding: 12px 15px;
   border-radius: 16px;
@@ -773,7 +776,7 @@ body.obs-mode .stage-wrapper {
   }
 
   100% {
-    transform: translate3d(0, -1180px, 0) scale(0.92);
+    transform: translate3d(0, -720px, 0) scale(0.92);
     opacity: 0;
   }
 }
@@ -781,8 +784,8 @@ body.obs-mode .stage-wrapper {
 #templeCanvas {
   position: absolute;
   inset: 0;
-  width: 1080px;
-  height: 1920px;
+  width: 1920px;
+  height: 1080px;
   pointer-events: none;
   z-index: 15;
 }
@@ -792,10 +795,10 @@ body.obs-mode .stage-wrapper {
    ========================================================================== */
 .bottom-hud-bar {
   position: absolute;
-  bottom: 20px;
+  bottom: 16px;
   left: 24px;
   right: 24px;
-  height: 192px;
+  height: 150px;
   z-index: 20;
   display: grid;
   grid-template-columns: 1.65fr 1fr;
@@ -1045,7 +1048,7 @@ body.obs-mode .stage-wrapper {
 
 .grand-ceremony-banner {
   position: absolute;
-  top: 790px;
+  top: 420px;
   left: 50%;
   transform: translate3d(-50%, 0, 0) scale(0.9);
   width: 860px;
@@ -1228,6 +1231,7 @@ body.obs-mode .stage-wrapper {
   padding-top: 4px;
   border-top: 1px solid rgba(244, 193, 80, 0.15);
 }
+
 /* Sáng nhẹ cho chủ lễ & người đi bộ trên thảm đỏ */
 .central-worshipper .devotee-sprite,
 .carpet-walker .devotee-sprite {

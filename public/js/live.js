@@ -11,15 +11,15 @@
     document.body.classList.add('obs-mode');
   }
 
-  // 1. Tự động co giãn khung 1080x1920 vừa khít Stage Wrapper (9:16)
+  // 1. Tự động co giãn khung 1920x1080 vừa khít Stage Wrapper (16:9 landscape)
   const stageWrapper = document.getElementById('stageWrapper');
-  const stage9x16 = document.getElementById('stage9x16');
+  const stageWide = document.getElementById('stageWide');
 
   function fitStage() {
-    if (!stageWrapper || !stage9x16) return;
+    if (!stageWrapper || !stageWide) return;
     const rect = stageWrapper.getBoundingClientRect();
-    const scale = rect.width / 1080;
-    stage9x16.style.transform = `scale(${scale})`;
+    const scale = Math.min(rect.width / 1920, rect.height / 1080);
+    stageWide.style.transform = `translate(-50%, -50%) scale(${scale})`;
   }
   window.addEventListener('resize', fitStage);
   fitStage();
@@ -71,21 +71,21 @@
       incenseHolder.appendChild(stick);
 
       const rad = (angleDeg * Math.PI) / 180;
-      const tipX = 540 + (leftPx - 65) + Math.sin(rad) * heightPx;
-      const tipY = 895 - Math.cos(rad) * heightPx;
+      const tipX = 960 + (leftPx - 65) + Math.sin(rad) * heightPx;
+      const tipY = 648 - Math.cos(rad) * heightPx;
       tips.push({ x: tipX, y: tipY });
     }
     particles.setIncenseTips(tips);
   }
 
-  // 4. Dựng Hàng 6 Đệm Quỳ VIP (Top 6 Thí Chủ trên bục gỗ y=1188)
+  // 4. Dựng Hàng 6 Đệm Quỳ VIP (Top 6 Thí Chủ hai bên thảm đỏ ngay trước ban thờ)
   const VIP_CUSHION_COORDS = [
-    { x: 140, y: 1188, rank: 1 },
-    { x: 268, y: 1188, rank: 2 },
-    { x: 392, y: 1188, rank: 3 },
-    { x: 688, y: 1188, rank: 4 },
-    { x: 812, y: 1188, rank: 5 },
-    { x: 940, y: 1188, rank: 6 }
+    { x: 600, y: 800, rank: 1 },
+    { x: 710, y: 800, rank: 2 },
+    { x: 820, y: 800, rank: 3 },
+    { x: 1100, y: 800, rank: 4 },
+    { x: 1210, y: 800, rank: 5 },
+    { x: 1320, y: 800, rank: 6 }
   ];
 
   function renderVipCushions(leaderboard = []) {
@@ -107,30 +107,30 @@
     }).join('');
   }
 
-  // 5. Dựng Đạo Tràng 40 Phật Tử Quỳ Lễ Hai Bên Thảm Đỏ (5 Hàng x 4 Cột mỗi bên)
+  // 5. Dựng Đạo Tràng 48 Phật Tử Quỳ Lễ Hai Bên Thảm Đỏ (4 Hàng x 6 Cột mỗi bên)
   const congregationHall = document.getElementById('congregationHall');
   const HALL_SEAT_COORDS = [];
 
   (function buildHallGrid() {
-    const rows = 5;
-    const colsPerSide = 4;
+    const rows = 4;
+    const colsPerSide = 6;
     for (let r = 0; r < rows; r++) {
-      const progress = r / (rows - 1); // 0 (xa) -> 1 (gần)
-      const y = Math.round(1290 + progress * 355); // 1290 -> 1645
-      const scale = +(0.76 + progress * 0.28).toFixed(2);
+      const progress = r / (rows - 1); // 0 (xa, gần ban thờ) -> 1 (gần camera)
+      const y = Math.round(836 + progress * 172); // 836 -> 1008
+      const scale = +(0.72 + progress * 0.30).toFixed(2);
 
-      // Cánh trái thảm đỏ
-      const leftInnerX = Math.round(335 - progress * 48); // mép thảm mở rộng dần
-      const leftOuterX = 48;
+      // Cánh trái thảm đỏ (c=0 ngoài cùng -> c=5 sát thảm)
+      const leftInnerX = Math.round(848 - progress * 168); // 848 -> 680
+      const leftOuterX = 78;
       for (let c = 0; c < colsPerSide; c++) {
         const t = c / (colsPerSide - 1);
         const x = Math.round(leftOuterX + t * (leftInnerX - leftOuterX));
         HALL_SEAT_COORDS.push({ side: 'L', row: r, col: c, x, y, scale });
       }
 
-      // Cánh phải thảm đỏ
-      const rightInnerX = Math.round(745 + progress * 48);
-      const rightOuterX = 1032;
+      // Cánh phải thảm đỏ (c=0 sát thảm -> c=5 ngoài cùng)
+      const rightInnerX = Math.round(1072 + progress * 168); // 1072 -> 1240
+      const rightOuterX = 1842;
       for (let c = 0; c < colsPerSide; c++) {
         const t = c / (colsPerSide - 1);
         const x = Math.round(rightInnerX + t * (rightOuterX - rightInnerX));
@@ -149,11 +149,11 @@
     if (sig === lastRenderedLeaderboardJson && congregationHall.children.length > 0) return;
     lastRenderedLeaderboardJson = sig;
 
-    // Ưu tiên gắn thẻ tên bảng vàng vào các ghế gần thảm đỏ dễ nhìn nhất
-    const labeledSeatIndices = [
-      3, 4, 11, 12, 19, 20, 27, 28, 35, 36, 2, 5, 10, 13, 18, 21, 26, 29,
-      34, 37, 0, 7, 8, 15, 16, 23, 24, 31, 32, 39, 1, 6, 9, 14, 17, 22, 25, 30, 33, 38
-    ];
+    // Ưu tiên gắn thẻ tên bảng vàng vào các ghế gần thảm đỏ & hàng trước dễ nhìn nhất
+    const labeledSeatIndices = HALL_SEAT_COORDS
+      .map((s, i) => ({ i, score: s.row * 1000 - Math.abs(s.x - 960) }))
+      .sort((a, b) => b.score - a.score)
+      .map((s) => s.i);
     const seatViewerMap = new Map();
     hallViewers.forEach((viewer, idx) => {
       if (idx < labeledSeatIndices.length) {
@@ -161,13 +161,20 @@
       }
     });
 
-    // Chú tiểu nào cũng có tên: ghế trống bảng vàng thì gán tên phật tử Viteccons
+    // Chú tiểu nào cũng có tên: ghế trống bảng vàng thì gán pháp danh công trường
     const HALL_NAME_POOL = [
-      'Anh Tâm', 'Chị Nga', 'KS. Bảo', 'CN. Tài', 'Thím Ba', 'Chú Hai', 'Em Nhân', 'Cô Lan',
-      'Bác Hùng', 'Dì Tư', 'KS. Phong', 'Anh Trí', 'Chị Yến', 'Em Khôi', 'Bác Năm', 'Thím Năm',
-      'Chú Sáu', 'CN. Vinh', 'KS. Hải', 'Anh Đức', 'Chị Phượng', 'Em Linh', 'Bác Lợi', 'Dì Chin',
-      'Chú Mười', 'CN. Tấn', 'KS. Dũng', 'Anh Hòa', 'Chị Thu', 'Em Trang', 'Bác Bảy', 'Thím Tám',
-      'KS. Kha', 'CN. Luận', 'Anh Nghĩa', 'Chị Diễm', 'Em Phát', 'Bác Thảo', 'CN. Cường', 'KS. Tú'
+      'Thích Trúng Thầu', 'Thích Trộn Hồ', 'Thích Đổ Bê Tông', 'Thích Nghiệm Thu',
+      'Thích Đóng Dấu', 'Thích Vẽ Bản Vẽ', 'Thích An Toàn', 'Thích Thường',
+      'Thích Giám Sát', 'Thích Khoán Gọn', 'Thích Đấu Giá', 'Thích Hiệp Đồng',
+      'Thích Cốp Pha', 'Thích Cốt Thép', 'Thích Chống Đỡ', 'Thích San Lấp',
+      'Thích Đào Móng', 'Thích Dựng Lắp', 'Thích Hoàn Thiện', 'Thích Bàn Giao',
+      'Thích Quyết Toán', 'Thích Khảo Sát', 'Thích Định Mức', 'Thích Dự Toán',
+      'Thích Kiểm Định', 'Thích Vật Tư', 'Thích Cẩu Tháp', 'Thích Xây Dựng',
+      'Thích Tiến Độ', 'Thích An Hòa', 'Thích Phước Lành', 'Thích Tâm Tịnh',
+      'Thích Buông Nhẹ', 'Thích Vô Vi', 'Thích Từ Bi', 'Thích Minh Triết',
+      'Thích Hỷ Xả', 'Thích Trang Nghiêm', 'Thích Cầu An', 'Thích Thuận Lợi',
+      'Thích Cát Tường', 'Thích Bình An', 'Thích An Nhiên', 'Thích Thanh Tịnh',
+      'Thích Giác Ngộ', 'Thích Từ Tâm', 'Thích Khai Sáng', 'Thích Nghiệp Thành'
     ];
 
     congregationHall.innerHTML = HALL_SEAT_COORDS.map((seat, idx) => {
@@ -179,10 +186,11 @@
           ? `<img src="${escapeHtml(viewer.avatar)}" alt="" />`
           : escapeHtml(String(seatName || 'P').charAt(0).toUpperCase())
         }</span>
-            <span class="seat-username">${escapeHtml(shortenName(seatName, 11))}</span>
+            <span class="seat-username">${escapeHtml(shortenName(seatName, 14))}</span>
           </div>
         `;
 
+      const seatSprite = idx % 9 === 4 ? '/assets/devotee_green.png' : '/assets/devotee.png';
       return `
         <div
           class="hall-seat"
@@ -190,7 +198,7 @@
           style="left: ${seat.x}px; top: ${seat.y}px; z-index: ${20 + seat.row * 2}; transform: translate(-50%, -100%) scale(${seat.scale});"
         >
           <img
-            src="/assets/devotee.png"
+            src="${seatSprite}"
             alt="Phật tử"
             class="devotee-sprite"
             style="animation-delay: ${((idx * 0.27) % 3.5).toFixed(2)}s;"
@@ -212,7 +220,7 @@
     prostrate: '/assets/devotee_prostrate.png',
     prostrateDeep: '/assets/devotee_prostrate_deep.png'
   };
-  Object.values(SPRITE_FRAMES).forEach((url) => {
+  Object.values(SPRITE_FRAMES).concat(['/assets/devotee_green.png']).forEach((url) => {
     const img = new Image();
     img.src = url;
   });
@@ -224,12 +232,13 @@
       if (i % 4 !== 0) return;
       const img = el.querySelector('.devotee-sprite');
       if (!img) return;
+      const isGreen = img.src.includes('devotee_green');
       const delay = (i % 4) * 80;
       setTimeout(() => { img.src = SPRITE_FRAMES.forehead; }, delay);
       setTimeout(() => { img.src = SPRITE_FRAMES.bowMid; }, delay + 140);
       setTimeout(() => { img.src = SPRITE_FRAMES.prostrateDeep; }, delay + 300);
       setTimeout(() => { img.src = SPRITE_FRAMES.bowMid; }, delay + 620);
-      setTimeout(() => { img.src = SPRITE_FRAMES.kneel; }, delay + 780);
+      setTimeout(() => { img.src = isGreen ? '/assets/devotee_green.png' : SPRITE_FRAMES.kneel; }, delay + 780);
     });
   }
 
@@ -345,7 +354,7 @@
       lotusHand.classList.add('flare');
       setTimeout(() => lotusHand.classList.remove('flare'), 3600);
     }
-    particles.spawnBellWave(540, 260, 2);
+    particles.spawnBellWave(960, 300, 2);
 
     // Cập nhật dòng thông báo dưới thanh HUD
     const hudName = document.getElementById('devoteeNameLine');
@@ -486,8 +495,8 @@
     switch (ev.type) {
       case 'burnIncense': {
         audio.playIncenseChime();
-        particles.spawnIncenseBurst(540, 895);
-        particles.spawnFloatingMerit(`+${ev.merit} Công Đức`, 540, 860, '#ffe082');
+        particles.spawnIncenseBurst(960, 645);
+        particles.spawnFloatingMerit(`+${ev.merit} Công Đức`, 960, 610, '#ffe082');
         animateWalkerOnCarpet(ev.user, ev.avatar, `🔥 Dâng ${ev.count} nén hương (+${ev.merit} CĐ)`, ev.wish);
         break;
       }
@@ -495,15 +504,15 @@
       case 'strikeWoodenFish': {
         audio.playWoodenFish();
         pulseHallBowing();
-        particles.spawnFloatingMerit(`+${ev.merit} Công Đức`, 890, 935, '#ffd54f');
+        particles.spawnFloatingMerit(`+${ev.merit} Công Đức`, 1520, 720, '#ffd54f');
         break;
       }
 
       case 'ringBell': {
         audio.playTempleBell(1.0);
         pulseHallBowing();
-        particles.spawnBellWave(540, 510, 4);
-        particles.spawnFloatingMerit(`+${ev.merit} Công Đức`, 190, 935, '#fff3b0');
+        particles.spawnBellWave(960, 380, 4);
+        particles.spawnFloatingMerit(`+${ev.merit} Công Đức`, 400, 720, '#fff3b0');
         updateCentralWorshipper(ev.user, ev.avatar, `🔔 Thỉnh Đại Hồng Chung (+${ev.merit} CĐ)`, ev.wish);
         break;
       }
@@ -511,7 +520,7 @@
       case 'sendPrayer': {
         audio.playIncenseChime();
         spawnSkyLantern(ev.user, ev.wish);
-        particles.spawnFloatingMerit(`+${ev.merit} Công Đức`, 540, 920, '#ffb74d');
+        particles.spawnFloatingMerit(`+${ev.merit} Công Đức`, 960, 660, '#ffb74d');
         animateWalkerOnCarpet(ev.user, ev.avatar, `🏮 Cầu phúc (+${ev.merit} CĐ)`, ev.wish);
         break;
       }
@@ -519,8 +528,8 @@
       case 'offerGift': {
         audio.playIncenseChime();
         audio.playTempleBell(0.85);
-        particles.spawnIncenseBurst(540, 895);
-        particles.spawnFloatingMerit(`+${ev.merit} Công Đức`, 540, 840, '#fff3b0');
+        particles.spawnIncenseBurst(960, 645);
+        particles.spawnFloatingMerit(`+${ev.merit} Công Đức`, 960, 600, '#fff3b0');
         animateWalkerOnCarpet(ev.user, ev.avatar, `🪷 Dâng ${ev.giftName} (+${ev.merit} CĐ)`, ev.wish);
         break;
       }
@@ -575,7 +584,7 @@
     if (!layer) return;
     const lantern = document.createElement('div');
     lantern.className = 'sky-lantern';
-    const leftPos = 80 + Math.floor(Math.random() * 640);
+    const leftPos = 60 + Math.floor(Math.random() * 1560);
     lantern.style.left = `${leftPos}px`;
     lantern.innerHTML = `
       <div class="sky-lantern-user">🙏 ${escapeHtml(user)}</div>

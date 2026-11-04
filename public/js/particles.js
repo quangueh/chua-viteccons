@@ -10,8 +10,8 @@ class TempleParticleEngine {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
-    this.width = 1080;
-    this.height = 1920;
+    this.width = 1920;
+    this.height = 1080;
     this.canvas.width = this.width;
     this.canvas.height = this.height;
 
@@ -139,7 +139,7 @@ class TempleParticleEngine {
     });
   }
 
-  spawnIncenseBurst(x = 540, y = 890) {
+  spawnIncenseBurst(x = 960, y = 645) {
     for (let i = 0; i < 18; i++) {
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.1;
       const speed = 2.5 + Math.random() * 5.0;
@@ -156,7 +156,7 @@ class TempleParticleEngine {
     }
   }
 
-  spawnBellWave(x = 540, y = 510, count = 2) {
+  spawnBellWave(x = 960, y = 380, count = 2) {
     for (let i = 0; i < Math.min(count, 2); i++) {
       this.soundWaves.push({
         x,
@@ -169,7 +169,7 @@ class TempleParticleEngine {
     }
   }
 
-  spawnFloatingMerit(text = '+1 Công Đức', x = 540, y = 940, color = '#ffe082') {
+  spawnFloatingMerit(text = '+1 Công Đức', x = 960, y = 640, color = '#ffe082') {
     if (this.floatingTexts.length > 8) this.floatingTexts.shift();
     this.floatingTexts.push({
       text,
@@ -189,8 +189,8 @@ class TempleParticleEngine {
       const angle = (Math.PI * 2 * i) / 36;
       const speed = 3.5 + Math.random() * 7.5;
       this.burstParticles.push({
-        x: 540,
-        y: 510,
+        x: 960,
+        y: 380,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         r: 3 + Math.random() * 3.5,
@@ -230,7 +230,7 @@ class TempleParticleEngine {
     for (let i = this.smokeParticles.length - 1; i >= 0; i--) {
       const p = this.smokeParticles[i];
       p.age += 1;
-      if (p.age >= p.maxAge || p.y < 495) {
+      if (p.age >= p.maxAge || p.y < 300) {
         this.smokeParticles.splice(i, 1);
         continue;
       }
