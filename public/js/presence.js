@@ -10,6 +10,27 @@
  * đủ rộng để tab chạy nền bị Chrome throttle timer vẫn không bị "bay màu".
  * Mất kết nối → chạy một mình như cũ.
  */
+// ── bảo vệ chung cho cả 2 engine (mesh + firebase) ─────────────────────────
+const _ritAnimAt = new Map(); // sid -> ts animate gần nhất — chặn storm từ client spam
+function ritAnimOk(rsid) {
+  const last = _ritAnimAt.get(rsid) || 0;
+  const t = Date.now();
+  if (t - last < 4000) return false;
+  _ritAnimAt.set(rsid, t);
+  if (_ritAnimAt.size > 300) _ritAnimAt.clear();
+  return true;
+}
+const _meritCaps = new Map(); // sid -> {m, t} — clamp merit tăng quá nhanh phía người xem
+function clampMerit(rsid, incoming) {
+  const m = Math.max(0, incoming | 0);
+  let cap = _meritCaps.get(rsid);
+  if (!cap) { cap = { m: 0, t: Date.now() }; _meritCaps.set(rsid, cap); }
+  const allow = cap.m + 200 * ((Date.now() - cap.t) / 60000); // tối đa ~200 CĐ/phút
+  const out = Math.min(m, Math.floor(allow));
+  if (out > cap.m) cap.m = out;
+  return out;
+}
+
 const MeshNet = function () {
   const TOPIC = 'cvtc-hall-8f3k2qz';
   const BASE = 'https://ntfy.sh';
@@ -167,7 +188,7 @@ const MeshNet = function () {
         noteSeatChange(p, seat, t);
         if (m.claimTs) p.claimTs = m.claimTs;
         p.enqTs = m.enqTs || 0;
-        p.merit = Math.max(0, m.merit | 0);
+        p.merit = clampMerit(m.sid, m.merit);
         markDirty();
         break;
       }
@@ -223,12 +244,12 @@ const MeshNet = function () {
         };
         recentRits.unshift(ev);
         if (recentRits.length > 30) recentRits.length = 30;
-        if (typeof onRitualCb === 'function') onRitualCb(ev);
+        if (ritAnimOk(ev.uniqueId) && typeof onRitualCb === 'function') onRitualCb(ev);
         markDirty();
         break;
       }
       case 'merit': {
-        p.merit = Math.max(0, m.merit | 0);
+        p.merit = clampMerit(m.sid, m.merit);
         markDirty();
         break;
       }
@@ -535,6 +556,8 @@ const FirebaseNet = function () {
   let db = null, myRef = null, seatsRef = null, eventsRef = null, chatRef = null;
   let started = false, dead = false, up = false;
 
+  const APP_VERSION = 10; // khớp ?v= trong index.html — Firebase temple/appVersion lớn hơn thì tự reload
+
   function now() { return Date.now(); }
   function markDirty() {
     setTimeout(() => { if (typeof onChangeCb === 'function') onChangeCb(); }, 30);
@@ -610,6 +633,7 @@ const FirebaseNet = function () {
         }
         me.seat = seatIdx; me.claimTs = now(); me.enqTs = 0;
         try { seatsRef.child(seatIdx).onDisconnect().remove(); } catch (_) { }
+        try { sessionStorage.setItem('chua_vt_seat', String(seatIdx)); } catch (_) { }
         writeMe();
         markDirty();
       },
@@ -624,8 +648,15 @@ const FirebaseNet = function () {
   function leave() {
     const hadSeat = me.seat;
     me.seat = -1; me.claimTs = 0; me.enqTs = 0;
+    // version-bump reload: không nhả chiếu, giữ số chiếu để reconnect đòi lại
+    if (sessionStorage.getItem('chua_vt_keepseat')) {
+      try { sessionStorage.removeItem('chua_vt_keepseat'); } catch (_) { }
+      markDirty();
+      return;
+    }
     try {
       if (hadSeat >= 0 && seatsRef) seatsRef.child(hadSeat).remove();
+      sessionStorage.removeItem('chua_vt_seat');
       writeMe();
     } catch (_) { }
     markDirty();
@@ -680,6 +711,17 @@ const FirebaseNet = function () {
       eventsRef = db.ref('temple/events');
       chatRef = db.ref('temple/chat');
 
+      // Bump version từ xa: temple/appVersion > bản đang chạy → giữ chiếu + reload lấy code mới
+      db.ref('temple/appVersion').on('value', (snap) => {
+        const want = snap.val() | 0;
+        if (want > APP_VERSION && sessionStorage.getItem('chua_vt_seenver') !== String(want)) {
+          try {
+            sessionStorage.setItem('chua_vt_seenver', String(want));
+            sessionStorage.setItem('chua_vt_keepseat', '1');
+          } catch (_) { }
+          location.reload();
+        }
+      });
       db.ref('.info/connected').on('value', (snap) => {
         if (snap.val() === true && !dead) {
           up = true;
@@ -691,6 +733,14 @@ const FirebaseNet = function () {
             const want = me.seat;
             me.seat = -1; me.claimTs = 0;
             claimSeat(want);
+          } else {
+            // reload giữa chừng (F5 / version bump) → chiếu cũ bị onDisconnect xóa → đòi lại đúng số
+            const old = parseInt(sessionStorage.getItem('chua_vt_seat') || '-1', 10);
+            if (me.name && old >= 0 && old < TOTAL_SEATS) {
+              const holder = seatMap && seatMap[old];
+              if (!holder) claimSeat(old);
+              else if (holder.sid === sid) { me.seat = old; me.claimTs = now(); } // record cũ của mình còn sót
+            }
           }
           writeMe();
           markDirty();
@@ -698,7 +748,12 @@ const FirebaseNet = function () {
       });
       db.ref('temple/users').on('value', (snap) => {
         peers.clear();
-        snap.forEach((c) => { const v = c.val(); if (v) peers.set(c.key, v); });
+        snap.forEach((c) => {
+          const v = c.val();
+          if (!v) return;
+          v.merit = clampMerit(c.key, v.merit); // spam merit phía client cũ bị bóp tại đây
+          peers.set(c.key, v);
+        });
         maybePromoteMyself();
         markDirty();
       });
@@ -753,7 +808,7 @@ const FirebaseNet = function () {
         recentRits.unshift(ev);
         if (recentRits.length > 30) recentRits.length = 30;
         // event cu (truoc luc mo trang) chi vao feed, khong animate lai
-        if (ev.ts >= startTs - 30000 && typeof onRitualCb === 'function') onRitualCb(ev);
+        if (ev.ts >= startTs - 30000 && ritAnimOk(ev.uniqueId) && typeof onRitualCb === 'function') onRitualCb(ev);
         markDirty();
       });
       // chat realtime: toàn bộ lịch sử (child_added trả hết theo thứ tự key = thời gian) + tin mới
