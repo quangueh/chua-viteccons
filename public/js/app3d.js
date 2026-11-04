@@ -1319,6 +1319,86 @@ import { makeDevotee } from './chars3d.js';
   bind('btnTrackZen', () => { audio.ensureContext(); audio.setTrack('zen'); syncTrackBtns(); });
   syncTrackBtns();
 
+  // ═══ KHUNG CHAT REALTIME ═══
+  const chatPanel = document.getElementById('chatPanel');
+  const chatMsgs = document.getElementById('chatMsgs');
+  const chatInput = document.getElementById('chatInput');
+  const chatBadge = document.getElementById('chatBadge');
+  let chatUnread = 0;
+  let lastChatSend = 0;
+  const chatLoadTs = Date.now(); // tin cũ hơn mốc này là lịch sử — render nhưng không đếm unread
+  let chatEmptyEl = chatMsgs?.querySelector('.chat-empty') || null;
+
+  const chatNameColor = (uid) => {
+    let h = 0;
+    for (let i = 0; i < String(uid || '').length; i++) h = (h * 31 + String(uid).charCodeAt(i)) >>> 0;
+    return `hsl(${h % 360}, 72%, 72%)`;
+  };
+  const chatNearBottom = () => {
+    if (!chatMsgs) return true;
+    return chatMsgs.scrollHeight - chatMsgs.scrollTop - chatMsgs.clientHeight < 60;
+  };
+  const bumpUnread = () => {
+    if (!chatPanel?.classList.contains('collapsed') || !chatBadge) return;
+    chatUnread++;
+    chatBadge.textContent = String(chatUnread);
+    chatBadge.hidden = false;
+  };
+  const appendChat = (m) => {
+    if (!chatMsgs) return;
+    if (chatEmptyEl) { chatEmptyEl.remove(); chatEmptyEl = null; }
+    const wasNear = chatNearBottom();
+    const row = document.createElement('div');
+    const mine = m.uniqueId && m.uniqueId === (window.TempleNet?.sid || '');
+    row.className = 'chat-msg' + (mine ? ' mine' : '');
+    const d = new Date(m.ts || Date.now());
+    const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    row.innerHTML = `<span class="chat-name" style="color:${chatNameColor(m.uniqueId)}">${escapeHtml(m.user || 'Thí Chủ')}</span><span>${escapeHtml(m.text || '')}</span><span class="chat-time">${hh}</span>`;
+    chatMsgs.appendChild(row);
+    while (chatMsgs.children.length > 60) chatMsgs.firstChild.remove();
+    if (mine || (m.ts && m.ts < chatLoadTs - 5000)) {
+      chatMsgs.scrollTop = chatMsgs.scrollHeight; // tin của mình hoặc tin lịch sử — cuộn xuống, không badge
+    } else if (wasNear && !chatPanel?.classList.contains('collapsed')) {
+      chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    } else bumpUnread();
+  };
+  const recentOwn = []; // text vừa gửi — echo Firebase của mình quay về thì bỏ qua (đã render lạc quan)
+  const sendChatMsg = () => {
+    const text = (chatInput?.value || '').trim();
+    if (!text || !window.TempleNet) return;
+    const t = Date.now();
+    if (t - lastChatSend < 1500) return;
+    lastChatSend = t;
+    recentOwn.push(text);
+    if (recentOwn.length > 10) recentOwn.shift();
+    window.TempleNet.sendChat(text);
+    appendChat({ user: sessionStorage.getItem('chua_vt_name') || 'Bạn', uniqueId: window.TempleNet.sid, text, ts: t });
+    chatInput.value = '';
+  };
+  if (window.TempleNet) window.TempleNet.onChat = (m) => {
+    if (m.uniqueId === window.TempleNet.sid) {
+      const i = recentOwn.indexOf(m.text);
+      if (i >= 0) { recentOwn.splice(i, 1); return; } // echo tin vừa gửi — đã render
+    }
+    appendChat(m);
+  };
+  bind('btnChatSend', sendChatMsg);
+  chatInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMsg(); });
+  const toggleChat = () => {
+    chatPanel?.classList.toggle('collapsed');
+    if (!chatPanel?.classList.contains('collapsed') && chatBadge) {
+      chatUnread = 0;
+      chatBadge.hidden = true;
+      if (chatMsgs) chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    }
+  };
+  bind('btnChatToggle', toggleChat);
+  document.getElementById('chatHead')?.addEventListener('click', (e) => {
+    if (e.target.id !== 'btnChatToggle') toggleChat();
+  });
+  // mặc định thu gọn cho gọn màn — có tin mới sẽ hiện badge
+  chatPanel?.classList.add('collapsed');
+
   const sMus = document.getElementById('sliderMusicVol');
   if (sMus) {
     sMus.addEventListener('input', (e) => {

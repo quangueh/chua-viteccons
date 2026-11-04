@@ -40,6 +40,7 @@ const MeshNet = function () {
   let onChangeCb = null;
   let onRitualCb = null;
   let onSeatLostCb = null;
+  let onChatCb = null;
   let ws = null;
   let hbTimer = null;
   let pruneTimer = null;
@@ -238,6 +239,18 @@ const MeshNet = function () {
         markDirty();
         break;
       }
+      case 'chat': {
+        if (typeof onChatCb === 'function') {
+          onChatCb({
+            user: p.name || m.name || 'Thí Chủ',
+            uniqueId: m.sid,
+            text: String(m.text || '').slice(0, 140),
+            ts: m.ts || t,
+            remote: true
+          });
+        }
+        break;
+      }
     }
   }
 
@@ -434,6 +447,9 @@ const MeshNet = function () {
   function setMerit(m) {
     if (m !== me.merit) { me.merit = m; pub({ t: 'merit', merit: m }); }
   }
+  function sendChat(text) {
+    pub({ t: 'chat', name: me.name, text: String(text || '').slice(0, 140), ts: now() });
+  }
 
   function start() {
     if (started) return;
@@ -486,10 +502,12 @@ const MeshNet = function () {
     enqueue,
     sendRitual,
     setMerit,
+    sendChat,
     recentRits,
     set onChange(cb) { onChangeCb = cb; },
     set onRitual(cb) { onRitualCb = cb; },
-    set onSeatLost(cb) { onSeatLostCb = cb; }
+    set onSeatLost(cb) { onSeatLostCb = cb; },
+    set onChat(cb) { onChatCb = cb; }
   };
 };
 
@@ -513,8 +531,8 @@ const FirebaseNet = function () {
   let seatMap = {};               // idx -> {sid, name}
   const recentRits = [];
   const seenRits = new Set();
-  let onChangeCb = null, onRitualCb = null, onSeatLostCb = null;
-  let db = null, myRef = null, seatsRef = null, eventsRef = null;
+  let onChangeCb = null, onRitualCb = null, onSeatLostCb = null, onChatCb = null;
+  let db = null, myRef = null, seatsRef = null, eventsRef = null, chatRef = null;
   let started = false, dead = false, up = false;
 
   function now() { return Date.now(); }
@@ -622,6 +640,17 @@ const FirebaseNet = function () {
 
   function setMerit(m) { if (m !== me.merit) { me.merit = m; writeMe(); } }
 
+  function sendChat(text) {
+    const clean = String(text || '').trim().slice(0, 140);
+    if (!clean || !chatRef || dead) return;
+    try {
+      chatRef.push({
+        app: 'cv1', sid, name: me.name, text: clean,
+        ts: firebase.database.ServerValue.TIMESTAMP
+      });
+    } catch (_) { }
+  }
+
   function sendRitual(evt) {
     if (!eventsRef || dead) return;
     try {
@@ -647,6 +676,7 @@ const FirebaseNet = function () {
       myRef = db.ref('temple/users/' + sid);
       seatsRef = db.ref('temple/seats');
       eventsRef = db.ref('temple/events');
+      chatRef = db.ref('temple/chat');
 
       db.ref('.info/connected').on('value', (snap) => {
         if (snap.val() === true && !dead) {
@@ -724,6 +754,20 @@ const FirebaseNet = function () {
         if (ev.ts >= startTs - 30000 && typeof onRitualCb === 'function') onRitualCb(ev);
         markDirty();
       });
+      // chat realtime: 50 tin gần nhất + tin mới
+      chatRef.limitToLast(50).on('child_added', (snap) => {
+        const m = snap.val();
+        if (!m || m.app !== 'cv1' || !m.sid) return;
+        // không lọc echo của mình ở đây (FB bắn sync ngay trong push → không lọc key được);
+        // app3d dedupe bằng hàng đợi tin vừa gửi → tin cũ của mình sau reload vẫn hiện
+        if (typeof onChatCb === 'function') {
+          onChatCb({
+            user: m.name || 'Thí Chủ', uniqueId: m.sid,
+            text: String(m.text || '').slice(0, 140),
+            ts: m.ts || now(), remote: true
+          });
+        }
+      });
       window.addEventListener('pagehide', () => leave());
     } catch (_) { dead = true; }
   }
@@ -741,10 +785,12 @@ const FirebaseNet = function () {
     enqueue,
     sendRitual,
     setMerit,
+    sendChat,
     recentRits,
     set onChange(cb) { onChangeCb = cb; },
     set onRitual(cb) { onRitualCb = cb; },
-    set onSeatLost(cb) { onSeatLostCb = cb; }
+    set onSeatLost(cb) { onSeatLostCb = cb; },
+    set onChat(cb) { onChatCb = cb; }
   };
 };
 
@@ -760,11 +806,12 @@ window.TempleNet = (function () {
   let eng = fb || mesh;
   // FB không kết nối được trong 10s → chuyển hẳn sang mesh
   let fbTimer = null;
-  const cbs = { onChange: null, onRitual: null, onSeatLost: null };
+  const cbs = { onChange: null, onRitual: null, onSeatLost: null, onChat: null };
   function bind(e) {
     e.onChange = () => { if (eng === e && cbs.onChange) cbs.onChange(); };
     e.onRitual = (ev) => { if (eng === e && cbs.onRitual) cbs.onRitual(ev); };
     e.onSeatLost = (s) => { if (eng === e && cbs.onSeatLost) cbs.onSeatLost(s); };
+    e.onChat = (m) => { if (eng === e && cbs.onChat) cbs.onChat(m); };
   }
   bind(eng);
   function start() {
@@ -793,8 +840,10 @@ window.TempleNet = (function () {
     enqueue: () => call('enqueue'),
     sendRitual: (e) => call('sendRitual', e),
     setMerit: (m) => call('setMerit', m),
+    sendChat: (t) => call('sendChat', t),
     set onChange(cb) { cbs.onChange = cb; },
     set onRitual(cb) { cbs.onRitual = cb; },
-    set onSeatLost(cb) { cbs.onSeatLost = cb; }
+    set onSeatLost(cb) { cbs.onSeatLost = cb; },
+    set onChat(cb) { cbs.onChat = cb; }
   };
 })();

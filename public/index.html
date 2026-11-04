@@ -210,17 +210,36 @@
         Build by Heart • Viteccons
       </div>
     </aside>
+
+    <!-- Khung chat realtime — mọi người trò chuyện qua kênh chung -->
+    <div class="chat-panel" id="chatPanel">
+      <div class="chat-head" id="chatHead">
+        <span class="chat-title">💬 Trò Chuyện</span>
+        <span class="chat-badge" id="chatBadge" hidden>0</span>
+        <button class="chat-toggle" id="btnChatToggle" title="Thu gọn">–</button>
+      </div>
+      <div class="chat-body" id="chatBody">
+        <div class="chat-msgs" id="chatMsgs">
+          <div class="chat-empty">Chưa có tin nhắn — chào mọi người đi 🙏</div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" class="chat-input" maxlength="140" placeholder="Nhắn gì đó..."
+            autocomplete="off" />
+          <button class="chat-send" id="btnChatSend" title="Gửi">➤</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="/vendor/gsap.min.js"></script>
   <script src="/js/vendor/firebase-app-compat.js"></script>
   <script src="/js/vendor/firebase-database-compat.js"></script>
-  <script src="/js/firebase-config.js?v=5"></script>
+  <script src="/js/firebase-config.js?v=6"></script>
   <script src="/js/vendor/mqtt.min.js"></script>
-  <script src="/js/presence.js?v=5"></script>
-  <script src="/js/standalone.js?v=5"></script>
-  <script src="/js/audio.js?v=5"></script>
-  <script type="module" src="/js/app3d.js?v=5"></script>
+  <script src="/js/presence.js?v=6"></script>
+  <script src="/js/standalone.js?v=6"></script>
+  <script src="/js/audio.js?v=6"></script>
+  <script type="module" src="/js/app3d.js?v=6"></script>
 </body>
 
 </html>
