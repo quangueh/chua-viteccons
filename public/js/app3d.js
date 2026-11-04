@@ -49,10 +49,15 @@ import { makeDevotee } from './chars3d.js';
   const HOME = { dist: _off.length(), yaw: Math.atan2(_off.x, _off.z) };
   HOME.pitch = Math.asin(_off.y / HOME.dist);
   let camDist = HOME.dist, camYaw = HOME.yaw, camPitch = HOME.pitch;
+  let camDistGoal = HOME.dist;
   const parallax = new THREE.Vector3();
+  const parallaxGoal = new THREE.Vector3();
   const clampN = (v, a, b) => Math.min(b, Math.max(a, v));
 
   function updateCamera() {
+    // mượt bằng lerp theo frame — không tween trùng nhau gây giật
+    parallax.lerp(parallaxGoal, 0.07);
+    camDist += (camDistGoal - camDist) * 0.22;
     const cp = Math.cos(camPitch);
     camera.position.set(
       camTarget.x + camDist * Math.sin(camYaw) * cp + parallax.x,
@@ -63,15 +68,15 @@ import { makeDevotee } from './chars3d.js';
     camera.lookAt(camTarget);
   }
 
-  // Parallax nhẹ theo chuột
-  wrapper.addEventListener('pointermove', (e) => {
+  // Parallax nhẹ theo chuột — chỉ trên canvas, tắt khi đang kéo/pinch để không đánh với orbit
+  canvas.addEventListener('pointermove', (e) => {
+    if (activePtrs.size > 0) return;
     const r = wrapper.getBoundingClientRect();
     const nx = (e.clientX - r.left) / r.width - 0.5;
     const ny = (e.clientY - r.top) / r.height - 0.5;
-    if (window.gsap) {
-      window.gsap.to(parallax, { x: nx * 0.9, y: -ny * 0.5, z: 0, duration: 1.2, ease: 'power2.out' });
-    }
+    parallaxGoal.set(nx * 0.9, -ny * 0.5, 0);
   });
+  canvas.addEventListener('pointerleave', () => parallaxGoal.set(0, 0, 0));
 
   // Kéo = xoay, Shift/chuột phải + kéo = dời tầm nhìn, 2 ngón = pinch zoom
   const activePtrs = new Map();
@@ -98,7 +103,7 @@ import { makeDevotee } from './chars3d.js';
     if (activePtrs.size === 2) {
       const [a, b] = [...activePtrs.values()];
       const nd = Math.hypot(a.x - b.x, a.y - b.y);
-      if (pinchDist > 0 && nd > 0) camDist = clampN(camDist * pinchDist / nd, 1.6, 34);
+      if (pinchDist > 0 && nd > 0) camDist = camDistGoal = clampN(camDist * pinchDist / nd, 1.6, 34);
       pinchDist = nd;
       return;
     }
@@ -123,11 +128,11 @@ import { makeDevotee } from './chars3d.js';
   canvas.addEventListener('pointercancel', endPointer);
   canvas.addEventListener('dblclick', () => {
     camTarget.copy(homeTarget);
-    camDist = HOME.dist; camYaw = HOME.yaw; camPitch = HOME.pitch;
+    camDist = camDistGoal = HOME.dist; camYaw = HOME.yaw; camPitch = HOME.pitch;
   });
-  wrapper.addEventListener('wheel', (e) => {
+  canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
-    camDist = clampN(camDist * (e.deltaY > 0 ? 1.09 : 0.92), 1.6, 34);
+    camDistGoal = clampN(camDistGoal * (e.deltaY > 0 ? 1.09 : 0.92), 1.6, 34);
   }, { passive: false });
 
   // ============================================================
