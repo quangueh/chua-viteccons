@@ -1417,6 +1417,12 @@ import { makeDevotee } from './chars3d.js';
   bind('btnGateEnter', enterTemple);
   gateInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') enterTemple(); });
   if (document.documentElement.classList.contains('need-name')) setTimeout(() => gateInput?.focus(), 350);
+  // canh chừng: giữa session mà mất pháp danh (storage bị xóa, tab để mở từ bản cũ) → cổng hiện lại
+  setInterval(() => {
+    if (!sessionStorage.getItem('chua_vt_name')) {
+      document.documentElement.classList.add('need-name');
+    }
+  }, 4000);
 
   const sMus = document.getElementById('sliderMusicVol');
   if (sMus) {

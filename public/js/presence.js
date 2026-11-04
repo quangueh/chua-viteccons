@@ -541,7 +541,7 @@ const FirebaseNet = function () {
   }
 
   function writeMe() {
-    if (!myRef || dead) return;
+    if (!myRef || dead || !me.name) return; // chưa ghi danh → không ghi record lên chùa
     try {
       myRef.set({
         name: me.name, seat: me.seat, enqTs: me.seat < 0 ? me.enqTs : 0,
@@ -590,6 +590,7 @@ const FirebaseNet = function () {
 
   function claimSeat(seatIdx) {
     if (seatIdx < 0 || seatIdx >= TOTAL_SEATS || dead) return { error: 'invalid' };
+    if (!me.name) return { error: 'noname' }; // chưa có pháp danh → không được chiếm chiếu
     const holder = seatMap && seatMap[seatIdx];
     if (holder && holder.sid && holder.sid !== sid) return { error: 'occupied' };
     if (!seatsRef) { // chưa kết nối → claim lạc quan, hội tụ sau
@@ -631,6 +632,7 @@ const FirebaseNet = function () {
   }
 
   function enqueue() {
+    if (!me.name) return 0; // chưa có pháp danh → không được xếp hàng
     if (!me.enqTs) { me.enqTs = now(); writeMe(); markDirty(); }
     setTimeout(maybePromoteMyself, 400);
     return me.enqTs;
@@ -642,7 +644,7 @@ const FirebaseNet = function () {
 
   function sendChat(text) {
     const clean = String(text || '').trim().slice(0, 140);
-    if (!clean || !chatRef || dead) return;
+    if (!clean || !chatRef || dead || !me.name) return; // chưa ghi danh → không chat
     try {
       chatRef.push({
         app: 'cv1', sid, name: me.name, text: clean,
