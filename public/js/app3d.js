@@ -40,19 +40,95 @@ import { makeDevotee } from './chars3d.js';
   }
   window.addEventListener('resize', resize);
 
+  // ============================================================
+  // CAMERA TỰ DO: kéo xoay • cuộn zoom • Shift/chuột phải kéo = dời tầm nhìn • đúp = về chỗ cũ
+  // ============================================================
+  const camTarget = CAM_LOOK.clone();
+  const homeTarget = CAM_LOOK.clone();
+  const _off = CAM_HOME.clone().sub(CAM_LOOK);
+  const HOME = { dist: _off.length(), yaw: Math.atan2(_off.x, _off.z) };
+  HOME.pitch = Math.asin(_off.y / HOME.dist);
+  let camDist = HOME.dist, camYaw = HOME.yaw, camPitch = HOME.pitch;
+  const parallax = new THREE.Vector3();
+  const clampN = (v, a, b) => Math.min(b, Math.max(a, v));
+
+  function updateCamera() {
+    const cp = Math.cos(camPitch);
+    camera.position.set(
+      camTarget.x + camDist * Math.sin(camYaw) * cp + parallax.x,
+      camTarget.y + camDist * Math.sin(camPitch) + parallax.y,
+      camTarget.z + camDist * Math.cos(camYaw) * cp + parallax.z
+    );
+    camera.position.y = Math.max(0.4, camera.position.y);
+    camera.lookAt(camTarget);
+  }
+
   // Parallax nhẹ theo chuột
   wrapper.addEventListener('pointermove', (e) => {
     const r = wrapper.getBoundingClientRect();
     const nx = (e.clientX - r.left) / r.width - 0.5;
     const ny = (e.clientY - r.top) / r.height - 0.5;
     if (window.gsap) {
-      window.gsap.to(camera.position, {
-        x: CAM_HOME.x + nx * 0.9,
-        y: CAM_HOME.y - ny * 0.5,
-        duration: 1.2, ease: 'power2.out'
-      });
+      window.gsap.to(parallax, { x: nx * 0.9, y: -ny * 0.5, z: 0, duration: 1.2, ease: 'power2.out' });
     }
   });
+
+  // Kéo = xoay, Shift/chuột phải + kéo = dời tầm nhìn, 2 ngón = pinch zoom
+  const activePtrs = new Map();
+  let dragMoved = 0, pinchDist = 0, panning = false;
+  canvas.style.cursor = 'grab';
+  canvas.style.touchAction = 'none';
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  canvas.addEventListener('pointerdown', (e) => {
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) { }
+    activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    dragMoved = 0;
+    panning = e.button === 2 || e.shiftKey;
+    if (activePtrs.size === 2) {
+      const [a, b] = [...activePtrs.values()];
+      pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+    }
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    const prev = activePtrs.get(e.pointerId);
+    if (!prev) return;
+    const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+    activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    dragMoved += Math.abs(dx) + Math.abs(dy);
+    if (activePtrs.size === 2) {
+      const [a, b] = [...activePtrs.values()];
+      const nd = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinchDist > 0 && nd > 0) camDist = clampN(camDist * pinchDist / nd, 1.6, 34);
+      pinchDist = nd;
+      return;
+    }
+    if (dragMoved < 4) return;
+    canvas.style.cursor = 'grabbing';
+    if (panning) {
+      const s = camDist * 0.0016;
+      camTarget.x = clampN(camTarget.x - dx * s * Math.cos(camYaw), -9, 9);
+      camTarget.z = clampN(camTarget.z + dx * s * Math.sin(camYaw), -14, 6);
+      camTarget.y = clampN(camTarget.y + dy * s, 0.4, 5);
+    } else {
+      camYaw -= dx * 0.005;
+      camPitch = clampN(camPitch + dy * 0.004, -0.04, 0.62);
+    }
+  });
+  function endPointer(e) {
+    activePtrs.delete(e.pointerId);
+    if (activePtrs.size < 2) pinchDist = 0;
+    canvas.style.cursor = 'grab';
+  }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('dblclick', () => {
+    camTarget.copy(homeTarget);
+    camDist = HOME.dist; camYaw = HOME.yaw; camPitch = HOME.pitch;
+  });
+  wrapper.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    camDist = clampN(camDist * (e.deltaY > 0 ? 1.09 : 0.92), 1.6, 34);
+  }, { passive: false });
 
   // ============================================================
   // ÁNH SÁNG ẤM CHÁNH ĐIỆN
@@ -306,8 +382,8 @@ import { makeDevotee } from './chars3d.js';
 
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
-  wrapper.addEventListener('pointerdown', (e) => {
-    if (e.target !== canvas) return;
+  wrapper.addEventListener('pointerup', (e) => {
+    if (e.target !== canvas || dragMoved > 6) return; // kéo xoay ≠ bấm pháp khí
     const r = canvas.getBoundingClientRect();
     pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
     pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
@@ -1264,7 +1340,7 @@ import { makeDevotee } from './chars3d.js';
     candleR.intensity = 0.8 + Math.cos(t * 6.3) * 0.15;
 
     updateLabels();
-    camera.lookAt(CAM_LOOK);
+    updateCamera();
     renderer.render(scene, camera);
   }
 
