@@ -426,11 +426,12 @@ import { makeDevotee } from './chars3d.js';
     return el;
   }
 
-  // chiếu cói trải sẵn 48 chỗ — trông như sơ đồ ghế rạp phim
+  // chiếu cói trải sẵn 48 chỗ — trông như sơ đồ ghế rạp phim, có số ghế trên chiếu
   const matGeo = new THREE.CylinderGeometry(0.62, 0.68, 0.10, 18);
   const matMatEmpty = new THREE.MeshStandardMaterial({ color: 0x9a7a3a, roughness: 0.9 });
   const matEdge = new THREE.MeshStandardMaterial({ color: 0x6e4f1e, roughness: 0.85 });
-  SEATS.forEach((seat) => {
+  const matEdgeHot = new THREE.MeshStandardMaterial({ color: 0xe8b84a, emissive: 0x8a5a10, roughness: 0.5 });
+  SEATS.forEach((seat, i) => {
     const m = new THREE.Mesh(matGeo, matMatEmpty);
     m.position.set(seat.x, 0.05, seat.z);
     scene.add(m);
@@ -438,8 +439,32 @@ import { makeDevotee } from './chars3d.js';
     rim.rotation.x = Math.PI / 2;
     rim.position.set(seat.x, 0.10, seat.z);
     scene.add(rim);
+    // số ghế in lên chiếu (khớp sơ đồ chọn chỗ)
+    const nc = document.createElement('canvas');
+    nc.width = 128; nc.height = 64;
+    const ng = nc.getContext('2d');
+    ng.font = '900 44px "Be Vietnam Pro", sans-serif';
+    ng.textAlign = 'center'; ng.textBaseline = 'middle';
+    ng.fillStyle = 'rgba(58,32,8,0.55)';
+    ng.fillText(String(i + 1), 64, 34);
+    const numTex = new THREE.CanvasTexture(nc);
+    const num = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.66, 0.33),
+      new THREE.MeshBasicMaterial({ map: numTex, transparent: true, opacity: 0.75, depthWrite: false })
+    );
+    num.rotation.x = -Math.PI / 2;
+    num.position.set(seat.x, 0.115, seat.z + 0.18);
+    scene.add(num);
+    seat.mat = m; seat.rim = rim;
     seatChars.push({ status: 'empty', devotee: null, labelEl: null, occupant: null, pendingTween: null });
   });
+  // hightlight chiếu khi rê chuột trên sơ đồ chọn chỗ
+  window.__seatHover = (idx, on) => {
+    const seat = SEATS[idx];
+    if (!seat || !seat.rim) return;
+    seat.rim.material = on ? matEdgeHot : matEdge;
+    seat.rim.scale.setScalar(on ? 1.28 : 1);
+  };
 
   // ============================================================
   // NGƯỜI ĐI LẠI — pool nhân vật đứng, bước ra khỏi ghế / vào chùa / ra về
@@ -1135,13 +1160,19 @@ import { makeDevotee } from './chars3d.js';
     const gridR = document.getElementById('seatGridR');
     if (!gridL || !gridR) return;
     gridL.innerHTML = ''; gridR.innerHTML = '';
+    // Sơ đồ như rạp phim: bàn thờ trên đỉnh, lối đi giữa.
+    // Cánh TRÁI: cột trong sơ đồ đảo ngược để cột sát lối đi nằm bên PHẢI cánh trái (đúng vị trí thật)
+    const cells = [[], []];
     for (let i = 0; i < TOTAL_SEATS; i++) {
       const occ = state.seats[i];
+      const side = i < 24 ? 0 : 1;                 // 0 = trái, 1 = phải
+      const row = Math.floor((i % 24) / 6), col = i % 6;
+      const vcol = side === 0 ? 5 - col : col;     // lật gương cột cánh trái
       const btn = document.createElement('button');
       btn.className = 'seat-cell';
-      const side = i < 24 ? 'L' : 'R';
-      const row = Math.floor((i % 24) / 6), col = i % 6;
-      btn.title = `Chiếu số ${i + 1} — hàng ${row + 1}, cột ${col + 1} ${side === 'L' ? 'trái' : 'phải'}`;
+      btn.title = `Chiếu số ${i + 1} — hàng ${row + 1}, cột ${col + 1} ${side === 0 ? 'trái' : 'phải'}`;
+      btn.addEventListener('mouseenter', () => window.__seatHover?.(i, true));
+      btn.addEventListener('mouseleave', () => window.__seatHover?.(i, false));
       if (occ) {
         btn.classList.add(isMe(occ) ? 'mine' : 'taken');
         btn.innerHTML = `<span class="cell-num">${i + 1}</span><span class="cell-name">${escapeHtml(shortenName(occ.name, 8))}</span>`;
@@ -1151,8 +1182,10 @@ import { makeDevotee } from './chars3d.js';
         btn.innerHTML = `<span class="cell-num">${i + 1}</span>`;
         btn.addEventListener('click', () => pickSeat(i));
       }
-      (side === 'L' ? gridL : gridR).appendChild(btn);
+      cells[side][row * 6 + vcol] = btn;
     }
+    gridL.append(...cells[0]);
+    gridR.append(...cells[1]);
   }
 
   async function pickSeat(idx) {
