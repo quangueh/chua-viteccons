@@ -9,8 +9,8 @@
 window.TempleNet = (function () {
   const TOPIC = 'cvtc-hall-8f3k2qz';
   const BASE = 'https://ntfy.sh';
-  const HEARTBEAT_MS = 5000;
-  const STALE_MS = 15000;
+  const HEARTBEAT_MS = 8000;
+  const STALE_MS = 24000;
   const TOTAL_SEATS = 48;
 
   // sid tồn tại theo tab — reload giữ, đóng tab mất (khớp "thoát web mất ghế")
@@ -245,7 +245,7 @@ window.TempleNet = (function () {
     const queue = [];
     const people = [];
     const all = new Map(peers);
-    if (me.name || me.seat >= 0 || me.enqTs) all.set(sid, { ...me, lastSeen: t });
+    all.set(sid, { ...me, lastSeen: t }); // luôn đếm cả mình (kể cả khách chưa ghi danh)
 
     // gom các sid đang sống theo chiếu họ claim
     const claimers = new Map(); // seat -> [{sid,name,claimTs}]
