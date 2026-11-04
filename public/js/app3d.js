@@ -326,30 +326,21 @@ import { makeDevotee } from './chars3d.js';
   });
 
   // ============================================================
-  // ĐẠO TRÀNG: CHIBI NGỒI HAI BÊN THẢM + NHÃN TÊN DOM
+  // ĐẠO TRÀNG: ĐÚNG 48 CHIẾU — chiếu luôn hiện, người thật ngồi vào mới hiện
   // ============================================================
-  const HALL_NAME_POOL = [
-    'Thích Trúng Thầu', 'Thích Trộn Hồ', 'Thích Đổ Bê Tông', 'Thích Nghiệm Thu',
-    'Thích Đóng Dấu', 'Thích Vẽ Bản Vẽ', 'Thích An Toàn', 'Thích Thường',
-    'Thích Giám Sát', 'Thích Khoán Gọn', 'Thích Đấu Giá', 'Thích Hiệp Đồng',
-    'Thích Cốp Pha', 'Thích Cốt Thép', 'Thích Chống Đỡ', 'Thích San Lấp',
-    'Thích Đào Móng', 'Thích Dựng Lắp', 'Thích Hoàn Thiện', 'Thích Bàn Giao',
-    'Thích Quyết Toán', 'Thích Khảo Sát', 'Thích Định Mức', 'Thích Dự Toán',
-    'Thích Kiểm Định', 'Thích Vật Tư', 'Thích Cẩu Tháp', 'Thích Xây Dựng',
-    'Thích Tiến Độ', 'Thích An Hòa', 'Thích Phước Lành', 'Thích Tâm Tịnh'
-  ];
-
-  const seats = [];      // { devotee, seat, labelEl }
-  const SEATS = [];
+  const TOTAL_SEATS = 48;
+  const SEATS = [];            // vị trí vật lý 48 chiếu
+  const seatChars = [];        // { status, devotee?, labelEl?, occupant? }
   const ROW_Z = [-2.6, -4.6, -6.7, -8.8];
-  const COL_X = [1.75, 2.95, 4.15, 5.35, 6.55];
-  for (let r = 0; r < ROW_Z.length; r++) {
-    const z = ROW_Z[r];
-    for (const x of COL_X) {
-      SEATS.push({ x: -x - 0.3, z, row: r, side: 'L' });
-      SEATS.push({ x: x + 0.3, z, row: r, side: 'R' });
+  const COL_X = [1.75, 2.95, 4.15, 5.35, 6.55, 7.75];
+  for (const side of [0, 1]) {
+    for (let r = 0; r < ROW_Z.length; r++) {
+      for (let c = 0; c < COL_X.length; c++) {
+        SEATS.push({ x: (side === 0 ? -1 : 1) * (COL_X[c] + 0.3), z: ROW_Z[r], row: r, side });
+      }
     }
   }
+  // chỉ số ghế: side*24 + row*6 + col (trùng TOTAL_SEATS = 48)
 
   function addSeatLabel(name) {
     const el = document.createElement('div');
@@ -359,59 +350,194 @@ import { makeDevotee } from './chars3d.js';
     return el;
   }
 
-  SEATS.forEach((seat, i) => {
-    const devotee = makeDevotee({ hat: i % 9 === 4 ? 'green' : 'white', sitting: true });
-    devotee.group.position.set(seat.x, 0, seat.z);
-    devotee.group.rotation.y = (Math.random() - 0.5) * 0.1;
-    scene.add(devotee.group);
-    const labelEl = addSeatLabel(HALL_NAME_POOL[i % HALL_NAME_POOL.length]);
-    seats.push({ devotee, seat, labelEl, viewer: null, labelAnchor: devotee.head, baseScale: 1 });
+  // chiếu cói trải sẵn 48 chỗ — trông như sơ đồ ghế rạp phim
+  const matGeo = new THREE.CylinderGeometry(0.62, 0.68, 0.10, 18);
+  const matMatEmpty = new THREE.MeshStandardMaterial({ color: 0x9a7a3a, roughness: 0.9 });
+  const matEdge = new THREE.MeshStandardMaterial({ color: 0x6e4f1e, roughness: 0.85 });
+  SEATS.forEach((seat) => {
+    const m = new THREE.Mesh(matGeo, matMatEmpty);
+    m.position.set(seat.x, 0.05, seat.z);
+    scene.add(m);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.035, 8, 22), matEdge);
+    rim.rotation.x = Math.PI / 2;
+    rim.position.set(seat.x, 0.10, seat.z);
+    scene.add(rim);
+    seatChars.push({ status: 'empty', devotee: null, labelEl: null, occupant: null, pendingTween: null });
   });
 
-  // 2 ghế VIP gần ban thờ nhất (top công đức 1-6)
-  const VIP_SEATS = [
-    { x: -1.55, z: -10.6 }, { x: -2.8, z: -10.6 }, { x: -4.05, z: -10.6 },
-    { x: 1.55, z: -10.6 }, { x: 2.8, z: -10.6 }, { x: 4.05, z: -10.6 }
-  ];
-  const vipSeats = [];
-  VIP_SEATS.forEach((s) => {
-    const devotee = makeDevotee({ sitting: true });
-    devotee.group.position.set(s.x, 0, s.z);
-    scene.add(devotee.group);
-    const labelEl = addSeatLabel('');
-    labelEl.classList.add('vip-label');
-    vipSeats.push({ devotee, seat: s, labelEl, labelAnchor: devotee.head });
-  });
+  // ============================================================
+  // NGƯỜI ĐI LẠI — pool nhân vật đứng, bước ra khỏi ghế / vào chùa / ra về
+  // ============================================================
+  const travelers = [];
+  function getTraveler() {
+    let t = travelers.find((x) => !x.busy);
+    if (!t) {
+      t = { char: makeDevotee({ sitting: false }), busy: false, labelEl: addSeatLabel('') };
+      t.char.group.visible = false;
+      t.labelEl.classList.add('walker-label');
+      scene.add(t.char.group);
+      travelers.push(t);
+    }
+    t.busy = true;
+    t.char.group.visible = true;
+    t.char.hip.rotation.x = 0;
+    return t;
+  }
+  function releaseTraveler(t) {
+    t.busy = false;
+    t.char.group.visible = false;
+    t.labelEl.textContent = '';
+  }
 
-  // "Bạn" + 1 người bạn ngồi cạnh — sát camera tạo cảm giác góc nhìn thứ nhất
-  const meDevotee = makeDevotee({ sitting: true });
-  meDevotee.group.position.set(4.3, 0, 6.6);
-  meDevotee.group.scale.setScalar(1.35);
-  meDevotee.group.rotation.y = -0.1;
-  scene.add(meDevotee.group);
-  const meLabel = addSeatLabel('Bạn');
-  meLabel.classList.add('me-label');
-  seats.push({ devotee: meDevotee, seat: { x: 4.3, z: 6.6, row: 9 }, labelEl: meLabel, labelAnchor: meDevotee.head, baseScale: 1.35 });
+  function faceDir(char, dx, dz) {
+    char.group.rotation.y = Math.atan2(dx, dz) + Math.PI;
+  }
 
-  const buddyDevotee = makeDevotee({ sitting: true });
-  buddyDevotee.group.position.set(-4.0, 0, 7.0);
-  buddyDevotee.group.scale.setScalar(1.4);
-  buddyDevotee.group.rotation.y = 0.12;
-  scene.add(buddyDevotee.group);
-  const buddyLabel = addSeatLabel('');
-  buddyLabel.classList.add('me-label');
-  seats.push({ devotee: buddyDevotee, seat: { x: -4.0, z: 7.0, row: 8 }, labelEl: buddyLabel, labelAnchor: buddyDevotee.head, baseScale: 1.4 });
+  // Đi theo waypoint: lắc chân + quay mặt theo hướng đi
+  function travelPath(t, waypoints, onDone) {
+    const G = window.gsap;
+    if (!G) {
+      const last = waypoints[waypoints.length - 1];
+      t.char.group.position.set(last.x, 0, last.z);
+      if (onDone) onDone();
+      return;
+    }
+    const tl = G.timeline({ onComplete: onDone });
+    for (const wp of waypoints) {
+      const p = t.char.group.position;
+      const dist = Math.hypot(wp.x - p.x, wp.z - p.z);
+      if (dist < 0.05) continue;
+      const dur = Math.max(0.4, dist / 2.6);
+      tl.call(() => faceDir(t.char, wp.x - p.x, wp.z - p.z));
+      tl.to(p, { x: wp.x, z: wp.z, duration: dur, ease: 'none' });
+      tl.to(t.char.legs.l.rotation, { x: 0.55, duration: 0.22, repeat: Math.max(1, Math.floor(dur / 0.44)) - 1, yoyo: true, ease: 'sine.inOut' }, '<');
+      tl.to(t.char.legs.r.rotation, { x: -0.55, duration: 0.22, repeat: Math.max(1, Math.floor(dur / 0.44)) - 1, yoyo: true, ease: 'sine.inOut' }, '<');
+    }
+    tl.call(() => {
+      t.char.legs.l.rotation.x = 0;
+      t.char.legs.r.rotation.x = 0;
+    });
+  }
 
-  // Chủ lễ đi dâng hương (nhân vật đứng/di bộ trên thảm)
-  const walker = makeDevotee({ sitting: false });
-  walker.group.position.set(0, 0, 6.5);
-  walker.group.visible = false;
-  scene.add(walker.group);
-  const walkerLabel = addSeatLabel('');
-  walkerLabel.classList.add('walker-label');
-  window.__dbg = { walker, scene, camera };
+  // Lối đi: vào từ cổng thảm → dọc thảm → ngang qua mép → lọt vào chiếu
+  function pathToSeat(seat) {
+    const aisleX = Math.sign(seat.x) * 1.32;
+    const backZ = seat.z + 0.95; // đi phía sau hàng chiếu để không đâm vào người ngồi
+    return [
+      { x: 0, z: seat.z + (seat.z < -7 ? 0.9 : -0.6) },
+      { x: aisleX, z: seat.z + (seat.z < -7 ? 0.9 : -0.6) },
+      { x: aisleX, z: backZ },
+      { x: seat.x, z: backZ },
+      { x: seat.x, z: seat.z }
+    ];
+  }
+  // Lối đi: từ chiếu → ra mép → dọc lối đi → lên trước lư hương
+  function pathSeatToAltar(seat) {
+    const aisleX = Math.sign(seat.x) * 1.32;
+    const backZ = seat.z + 0.95;
+    return [
+      { x: seat.x, z: backZ },
+      { x: aisleX, z: backZ },
+      { x: aisleX, z: -6.9 },
+      { x: 0, z: -7.0 }
+    ];
+  }
 
-  let walkerBusy = false;
+  // Người mới vào chùa: từ cổng đi tới chiếu rồi ngồi xuống
+  function animateSeatArrival(idx, occupant, onDone) {
+    const sc = seatChars[idx];
+    const seat = SEATS[idx];
+    sc.status = 'walking_in';
+    sc.occupant = occupant;
+    const t = getTraveler();
+    t.labelEl.innerHTML = `<b>${escapeHtml(occupant.name)}</b>`;
+    t.char.group.position.set(0, 0, 6.4);
+    faceDir(t.char, 0, -1);
+    const wps = pathToSeat(seat);
+    travelPath(t, wps, () => {
+      releaseTraveler(t);
+      // ngồi xuống: đổi sang nhân vật ngồi tại chiếu
+      const dev = makeDevotee({ sitting: true });
+      dev.group.position.set(seat.x, 0, seat.z);
+      scene.add(dev.group);
+      sc.devotee = dev;
+      sc.status = 'seated';
+      sc.labelEl = addSeatLabel(occupant.name);
+      if (isMe(occupant)) sc.labelEl.classList.add('me-label');
+      // ngồi xuống nhẹ
+      if (window.gsap) {
+        dev.group.position.y = 0.35;
+        gsap.to(dev.group.position, { y: 0, duration: 0.45, ease: 'bounce.out' });
+        gsap.from(dev.group.scale, { y: 1.2, duration: 0.4 });
+      }
+      if (onDone) onDone();
+    });
+  }
+
+  // Phật tử ra về: đứng dậy đi ra cổng → mất
+  function animateSeatDeparture(idx) {
+    const sc = seatChars[idx];
+    const seat = SEATS[idx];
+    const occ = sc.occupant;
+    if (sc.devotee) { scene.remove(sc.devotee.group); sc.devotee = null; }
+    if (sc.labelEl) { sc.labelEl.remove(); sc.labelEl = null; }
+    sc.status = 'leaving';
+    const t = getTraveler();
+    t.labelEl.innerHTML = occ ? `<b>${escapeHtml(occ.name)}</b>` : '';
+    t.char.group.position.set(seat.x, 0, seat.z);
+    const aisleX = Math.sign(seat.x) * 1.32;
+    const backZ = seat.z + 0.95;
+    const wps = [
+      { x: seat.x, z: backZ },
+      { x: aisleX, z: backZ },
+      { x: aisleX, z: 5.9 },
+      { x: 0, z: 6.4 }
+    ];
+    travelPath(t, wps, () => {
+      releaseTraveler(t);
+      sc.status = 'empty';
+      sc.occupant = null;
+    });
+  }
+
+  // Hàng chờ ở cổng (bên trái phía sau) — người thật đứng chờ ghế trống
+  const queueChars = [];
+  const QUEUE_BASE = { x: -4.6, z: 5.6 };
+  function renderQueue(queue) {
+    const q = Array.isArray(queue) ? queue.slice(0, 8) : [];
+    while (queueChars.length < q.length) {
+      const c = makeDevotee({ sitting: false });
+      c.group.scale.setScalar(0.92);
+      scene.add(c.group);
+      queueChars.push({ char: c, labelEl: addSeatLabel('') });
+    }
+    while (queueChars.length > q.length) {
+      const c = queueChars.pop();
+      scene.remove(c.char.group);
+      c.labelEl.remove();
+    }
+    q.forEach((m, i) => {
+      const qc = queueChars[i];
+      qc.char.group.position.set(QUEUE_BASE.x - i * 1.0, 0, QUEUE_BASE.z - i * 0.14);
+      qc.char.group.rotation.y = 0;
+      qc.labelEl.textContent = `#${i + 1} ${shortenName(m.name, 10)}`;
+      qc.labelEl.classList.add('queue-label');
+      qc.labelAnchor = qc.char.head;
+    });
+    // ẩn nhãn khi trống
+    for (let i = q.length; i < queueChars.length; i++) queueChars[i].labelEl.textContent = '';
+  }
+
+  // Người dùng hiện tại (pháp danh đã ghi danh ở trình duyệt này)
+  function myUniqueId() {
+    const n = localStorage.getItem('chua_vt_name') || '';
+    return n.toLowerCase().replace(/\s+/g, '');
+  }
+  function isMe(occ) {
+    if (!occ) return false;
+    const saved = localStorage.getItem('chua_vt_name') || '';
+    return (saved && occ.name === saved) || (occ.uniqueId && occ.uniqueId === myUniqueId());
+  }
 
   // ============================================================
   // LABEL PROJECTION (DOM theo vị trí 3D)
@@ -428,24 +554,28 @@ import { makeDevotee } from './chars3d.js';
 
   const proj = { x: 0, y: 0, behind: false };
   function updateLabels() {
-    for (const s of seats) {
-      if (!s.labelEl) continue;
-      projectToScreen(s.labelAnchor, proj);
+    for (const sc of seatChars) {
+      if (!sc.labelEl || !sc.devotee || sc.status !== 'seated') continue;
+      projectToScreen(sc.devotee.head, proj);
       if (proj.behind || proj.y < -40 || proj.y > wrapper.clientHeight + 40) {
-        s.labelEl.style.display = 'none';
+        sc.labelEl.style.display = 'none';
         continue;
       }
-      s.labelEl.style.display = '';
-      const dist = camera.position.distanceTo(s.devotee.group.position);
-      const sc = Math.min(1.15, Math.max(0.55, 14 / dist));
-      s.labelEl.style.transform = `translate(-50%, -100%) translate(${proj.x}px, ${proj.y - 14}px) scale(${sc})`;
+      sc.labelEl.style.display = '';
+      const dist = camera.position.distanceTo(sc.devotee.group.position);
+      const s = Math.min(1.15, Math.max(0.55, 14 / dist));
+      sc.labelEl.style.transform = `translate(-50%, -100%) translate(${proj.x}px, ${proj.y - 14}px) scale(${s})`;
     }
-    if (walker.group.visible) {
-      projectToScreen(walker.head, proj);
-      walkerLabel.style.display = proj.behind ? 'none' : '';
-      walkerLabel.style.transform = `translate(-50%, -100%) translate(${proj.x}px, ${proj.y - 10}px)`;
-    } else {
-      walkerLabel.style.display = 'none';
+    for (const t of travelers) {
+      if (!t.busy) { t.labelEl.style.display = 'none'; continue; }
+      projectToScreen(t.char.head, proj);
+      t.labelEl.style.display = proj.behind ? 'none' : '';
+      t.labelEl.style.transform = `translate(-50%, -100%) translate(${proj.x}px, ${proj.y - 10}px)`;
+    }
+    for (const qc of queueChars) {
+      projectToScreen(qc.labelAnchor, proj);
+      qc.labelEl.style.display = proj.behind ? 'none' : '';
+      qc.labelEl.style.transform = `translate(-50%, -100%) translate(${proj.x}px, ${proj.y - 10}px)`;
     }
     // nhãn đèn hoa đăng bám theo quả đèn
     for (const l of lanterns) {
@@ -564,63 +694,89 @@ import { makeDevotee } from './chars3d.js';
   }
 
   // ============================================================
-  // HÀNH LỄ: chủ lễ đi lên thảm -> quỳ -> đảnh lễ tam bái
+  // HÀNH LỄ: phật tử BƯỚC RA KHỎI CHIẾU của mình → lên lư hương →
+  // đảnh lễ tam bái HƯỚNG VỀ PHẬT → trở về chỗ ngồi
   // ============================================================
-  function walkAndBow(user, actionLabel, wish) {
-    walkerLabel.innerHTML = `<b>${escapeHtml(user)}</b><span>${escapeHtml(actionLabel)}</span>`;
+  const ALTAR_POS = new THREE.Vector3(0, 0, -7.0);
+
+  function bowSequence(hip, G, onDone) {
+    // Đảnh lễ tam bái: hướng về Phật (rotation.x ÂM = cúi về -z)
+    const tl = G.timeline({ onComplete: onDone });
+    tl.to(hip.rotation, { x: -0.32, duration: 0.4, ease: 'power2.out' })
+      .to(hip.rotation, { x: 0, duration: 0.4 });
+    for (let i = 0; i < 3; i++) {
+      tl.to(hip.rotation, { x: -1.15, duration: 0.55, ease: 'power2.inOut' }, '+=0.15')
+        .to(hip.rotation, { x: -1.15, duration: 0.45 })
+        .to(hip.rotation, { x: 0, duration: 0.6, ease: 'power2.inOut' });
+    }
+    tl.to(hip.rotation, { x: -0.3, duration: 0.4 }, '+=0.2')
+      .to(hip.rotation, { x: 0, duration: 0.4 });
+  }
+
+  function walkAndBow(user, actionLabel, wish, seatIdx) {
     const hudName = document.getElementById('devoteeNameLine');
     const hudAct = document.getElementById('devoteeActionTag');
     if (hudName) hudName.textContent = user || 'Thí Chủ';
     if (hudAct) hudAct.textContent = actionLabel || 'Dâng hương';
-
-    if (walkerBusy) { gsap.killTweensOf(walker.group.position); gsap.killTweensOf(walker.hip.rotation); }
-    walkerBusy = true;
-    walker.group.visible = true;
-    walker.group.position.set((Math.random() - 0.5) * 0.4, 0, 6.5);
-    walker.hip.rotation.x = 0;
-
-    const G = window.gsap;
-    const arriveZ = -6.9;
-    if (G) {
-      // di bộ: lắc lư + chân đánh (mô phỏng bước)
-      const walkDur = 2.6;
-      G.to(walker.group.position, { z: arriveZ, duration: walkDur, ease: 'power1.inOut' });
-      G.to(walker.legs.l.rotation, { x: 0.55, duration: 0.28, repeat: Math.floor(walkDur / 0.56), yoyo: true, ease: 'sine.inOut' });
-      G.to(walker.legs.r.rotation, { x: -0.55, duration: 0.28, repeat: Math.floor(walkDur / 0.56), yoyo: true, ease: 'sine.inOut' });
-      G.to(walker.group.position, {
-        y: 0.05, duration: 0.28, repeat: Math.floor(walkDur / 0.56), yoyo: true, ease: 'sine.inOut'
-      });
-      G.delayedCall(walkDur + 0.1, () => {
-        G.to([walker.legs.l.rotation, walker.legs.r.rotation], { x: 0, duration: 0.3 });
-        // đảnh lễ tam bái: x3 nhịp (chắp tay ngẩng -> gập sâu)
-        const tl = G.timeline({ onComplete: () => { walkerBusy = false; } });
-        tl.to(walker.hip.rotation, { x: 0.35, duration: 0.4, ease: 'power2.out' })
-          .to(walker.hip.rotation, { x: 0, duration: 0.4 });
-        for (let i = 0; i < 3; i++) {
-          tl.to(walker.hip.rotation, { x: 1.15, duration: 0.55, ease: 'power2.inOut' }, '+=0.15')
-            .to(walker.hip.rotation, { x: 1.15, duration: 0.45 })
-            .to(walker.hip.rotation, { x: 0, duration: 0.6, ease: 'power2.inOut' });
-        }
-        tl.to(walker.hip.rotation, { x: 0.3, duration: 0.4 }, '+=0.2')
-          .to(walker.hip.rotation, { x: 0, duration: 0.4 });
-      });
-    }
-    // hào quang + khói bùng
     incenseGlow.intensity = 2.6;
     if (window.gsap) gsap.to(incenseGlow, { intensity: 1.4, duration: 3 });
+
+    const G = window.gsap;
+    const sc = (seatIdx >= 0 && seatIdx < TOTAL_SEATS) ? seatChars[seatIdx] : null;
+    const seat = sc ? SEATS[seatIdx] : null;
+
+    // Người có ghế: ẩn nhân vật ngồi → đứng dậy đi lên lư hương
+    if (sc && sc.status === 'seated') {
+      sc.status = 'ritual';
+      if (sc.devotee) sc.devotee.group.visible = false;
+      if (sc.labelEl) sc.labelEl.style.display = 'none';
+    }
+    const t = getTraveler();
+    t.labelEl.innerHTML = `<b>${escapeHtml(user)}</b><span>${escapeHtml(actionLabel)}</span>`;
+    const startPos = seat ? { x: seat.x, z: seat.z } : { x: 0, z: 6.4 };
+    t.char.group.position.set(startPos.x, 0, startPos.z);
+    faceDir(t.char, 0, -1);
+
+    const goWps = seat ? pathSeatToAltar(seat) : [{ x: 0, z: -7.0 }];
+    travelPath(t, goWps, () => {
+      faceDir(t.char, 0, -1); // chắc chắn quay mặt về Phật trước khi lạy
+      const finish = () => {
+        // Quay về chiếu ngồi xuống (hoặc ra cổng nếu không có ghế)
+        if (seat && sc.status === 'ritual') {
+          const aisleX = Math.sign(seat.x) * 1.32;
+          const backZ = seat.z + 0.95;
+          const retWps = [
+            { x: aisleX, z: -6.9 },
+            { x: aisleX, z: backZ },
+            { x: seat.x, z: backZ },
+            { x: seat.x, z: seat.z }
+          ];
+          travelPath(t, retWps, () => {
+            releaseTraveler(t);
+            if (sc.devotee) sc.devotee.group.visible = true;
+            if (sc.labelEl) sc.labelEl.style.display = '';
+            sc.status = 'seated';
+          });
+        } else {
+          travelPath(t, [{ x: 0, z: 6.4 }], () => releaseTraveler(t));
+        }
+      };
+      if (G) bowSequence(t.char.hip, G, finish);
+      else finish();
+    });
   }
 
-  // đạo tràng vài người lạy theo (mõ/chuông)
+  // đạo tràng vài người lạy theo (mõ/chuông) — chỉ người đang NGỒI
   function pulseHallBowing() {
-    const picks = seats.filter((s) => s.seat.row < 4);
-    for (let i = 0; i < picks.length; i++) {
+    const seated = [];
+    seatChars.forEach((sc) => { if (sc.status === 'seated' && sc.devotee) seated.push(sc); });
+    for (let i = 0; i < seated.length; i++) {
       if (i % 4 !== 0) continue;
-      const d = picks[i].devotee;
-      const delay = (i % 4) * 0.08;
+      const d = seated[i].devotee;
       if (window.gsap) {
-        gsap.timeline({ delay })
-          .to(d.hip.rotation, { x: 1.1, duration: 0.5, ease: 'power2.inOut' })
-          .to(d.hip.rotation, { x: 1.1, duration: 0.35 })
+        gsap.timeline({ delay: (i % 4) * 0.08 })
+          .to(d.hip.rotation, { x: -1.1, duration: 0.5, ease: 'power2.inOut' })
+          .to(d.hip.rotation, { x: -1.1, duration: 0.35 })
           .to(d.hip.rotation, { x: 0, duration: 0.55, ease: 'power2.inOut' });
       }
     }
@@ -659,26 +815,25 @@ import { makeDevotee } from './chars3d.js';
     renderIncenseSticks(st.activeIncenseSticks || 9);
 
     const lb = Array.isArray(st.leaderboard) ? st.leaderboard : [];
-    const sig = JSON.stringify(lb.map((d) => `${d.name}:${d.merit}`).slice(0, 46));
-    if (sig !== lastLbSig) {
-      lastLbSig = sig;
-      // VIP top 6
-      vipSeats.forEach((vs, i) => {
-        const dev = lb[i];
-        vs.labelEl.textContent = dev ? `❶${i + 1} ${shortenName(dev.name, 11)}`.replace('❶', ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣'][i]) : '';
-      });
-      // Đạo tràng: gán tên thật từ leaderboard (hạng 7+), còn lại pháp danh
-      const hallViewers = lb.slice(6);
-      seats.forEach((s, i) => {
-        if (s.seat.row === 9) { // "Bạn"
-          const saved = localStorage.getItem('chua_vt_name');
-          s.labelEl.textContent = saved ? `🙏 ${shortenName(saved, 12)}` : '🙏 Bạn';
-          return;
+
+    // ── Đồng bộ 48 chiếu với người thật đang ngồi ──
+    if (Array.isArray(st.seats)) {
+      for (let i = 0; i < Math.min(TOTAL_SEATS, st.seats.length); i++) {
+        const occ = st.seats[i];
+        const sc = seatChars[i];
+        if (occ && sc.status === 'empty') {
+          animateSeatArrival(i, occ);
+        } else if (!occ && (sc.status === 'seated' || sc.status === 'walking_in')) {
+          animateSeatDeparture(i);
         }
-        const viewer = hallViewers[i];
-        s.labelEl.textContent = shortenName(viewer ? viewer.name : HALL_NAME_POOL[i % HALL_NAME_POOL.length], 14);
-      });
+      }
     }
+    if (Array.isArray(st.queue)) renderQueue(st.queue);
+    const freeCount = Array.isArray(st.seats) ? st.seats.filter((s) => !s).length : TOTAL_SEATS;
+    const seatStat = document.getElementById('statSeats');
+    if (seatStat) seatStat.textContent = `${TOTAL_SEATS - freeCount}/${TOTAL_SEATS}`;
+    const qStat = document.getElementById('statQueue');
+    if (qStat) qStat.textContent = String((st.queue || []).length);
 
     const lbList = document.getElementById('leaderboardList');
     if (lbList) {
@@ -731,6 +886,9 @@ import { makeDevotee } from './chars3d.js';
       case 'offerGift':
       case 'grandCeremony': return `🪷 <strong>${escapeHtml(ev.user)}</strong> dâng <em>${escapeHtml(ev.giftName)}</em> (+${ev.merit} CĐ)`;
       case 'drawFortune': return `🎋 <strong>${escapeHtml(ev.user)}</strong> gieo được Quẻ số ${ev.fortune?.number} (${ev.fortune?.rank})`;
+      case 'seatTaken': return `🪷 <strong>${escapeHtml(ev.user)}</strong> vào chùa, ngồi chiếu số ${(ev.seatIdx ?? 0) + 1}`;
+      case 'seatVacated': return `🚪 <strong>${escapeHtml(ev.user)}</strong> công phu xong, ra về`;
+      case 'queued': return `⏳ <strong>${escapeHtml(ev.user)}</strong> xếp hàng chờ (vị trí #${ev.position})`;
       default: return `✨ <strong>${escapeHtml(ev.user || 'Thí chủ')}</strong> tương tác`;
     }
   }
@@ -766,6 +924,14 @@ import { makeDevotee } from './chars3d.js';
   const BURNER_POS = new THREE.Vector3(0, 1.1, -8.3);
   function triggerRitualVisuals(ev) {
     if (!ev) return;
+    if (ev.type === 'seatTaken' && isMe(ev)) {
+      toast(`🪷 Đến lượt bạn! ${ev.user} ngồi chiếu số ${ev.seatIdx + 1}`);
+      refreshSeatStatus();
+    }
+    if (ev.type === 'queued' && isMe(ev)) {
+      toast(`⏳ Đạo tràng kín — bạn đang xếp hàng vị trí #${ev.position}`);
+      refreshSeatStatus();
+    }
     if (ev.ttsText && ev.type !== 'drawFortune') {
       audio.enqueueTts(ev.ttsText, { voice: ev.ttsVoice || 'maichi' });
     }
@@ -773,7 +939,7 @@ import { makeDevotee } from './chars3d.js';
       case 'burnIncense':
         audio.playIncenseChime();
         meritPopup(`+${ev.merit} Công Đức`, BURNER_POS.clone().add(new THREE.Vector3(0, 0.8, 0)), '#ffe082');
-        walkAndBow(ev.user, `🔥 Dâng ${ev.count} nén hương (+${ev.merit} CĐ)`, ev.wish);
+        walkAndBow(ev.user, `🔥 Dâng ${ev.count} nén hương (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx);
         break;
       case 'strikeWoodenFish':
         audio.playWoodenFish();
@@ -786,19 +952,19 @@ import { makeDevotee } from './chars3d.js';
         pulseHallBowing();
         spawnBellWave();
         meritPopup(`+${ev.merit} Công Đức`, new THREE.Vector3(-5.4, 2.6, -8.6), '#fff3b0');
-        walkAndBow(ev.user, `🔔 Thỉnh Đại Hồng Chung (+${ev.merit} CĐ)`, ev.wish);
+        walkAndBow(ev.user, `🔔 Thỉnh Đại Hồng Chung (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx);
         break;
       case 'sendPrayer':
         audio.playIncenseChime();
         spawnLantern(ev.user, ev.wish);
         meritPopup(`+${ev.merit} Công Đức`, BURNER_POS, '#ffb74d');
-        walkAndBow(ev.user, `🏮 Cầu phúc (+${ev.merit} CĐ)`, ev.wish);
+        walkAndBow(ev.user, `🏮 Cầu phúc (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx);
         break;
       case 'offerGift':
         audio.playIncenseChime();
         audio.playTempleBell(0.85);
         meritPopup(`+${ev.merit} Công Đức`, BURNER_POS.clone().add(new THREE.Vector3(0, 0.9, 0)), '#fff3b0');
-        walkAndBow(ev.user, `🪷 Dâng ${ev.giftName} (+${ev.merit} CĐ)`, ev.wish);
+        walkAndBow(ev.user, `🪷 Dâng ${ev.giftName} (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx);
         break;
       case 'grandCeremony':
         audio.playTempleBell(1.2);
@@ -806,7 +972,7 @@ import { makeDevotee } from './chars3d.js';
         spawnPetalRain(5);
         pulseHallBowing();
         showGrandCeremonyBanner(ev.user, ev.giftName, ev.merit);
-        walkAndBow(ev.user, `🐉 ${ev.giftName} (+${ev.merit} CĐ)`, ev.wish);
+        walkAndBow(ev.user, `🐉 ${ev.giftName} (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx);
         break;
       case 'drawFortune':
         audio.playFortuneShake();
@@ -815,7 +981,7 @@ import { makeDevotee } from './chars3d.js';
           onStart: () => {
             audio.playIncenseChime();
             showFortuneModal(ev.user, ev.fortune);
-            walkAndBow(ev.user, `🎋 Quẻ số ${ev.fortune?.number} (${ev.fortune?.rank})`, ev.fortune?.meaning || '');
+            walkAndBow(ev.user, `🎋 Quẻ số ${ev.fortune?.number} (${ev.fortune?.rank})`, ev.fortune?.meaning || '', ev.seatIdx);
           },
           onEnd: () => {
             clearTimeout(fortuneTimer);
@@ -847,8 +1013,120 @@ import { makeDevotee } from './chars3d.js';
     const res = window.TempleLocal?.handleRpc(method, params);
     if (res?.state) updateUIState(res.state);
     if (res?.event) triggerRitualVisuals(res.event);
+    refreshSeatStatus();
     return res;
   }
+
+  // ============================================================
+  // GHI DANH + CHỌN CHIẾU (kiểu ghế rạp phim) + THOÁT WEB MẤT GHẾ
+  // ============================================================
+  function refreshSeatStatus(st) {
+    const el = document.getElementById('seatStatus');
+    if (!el) return;
+    const state = st || window.TempleLocal?.getState();
+    if (!state) return;
+    const saved = localStorage.getItem('chua_vt_name');
+    if (!saved) { el.textContent = 'Chưa ghi danh — để lại pháp danh để chọn chiếu'; return; }
+    const uid = myUniqueId();
+    const mine = (state.seats || []).find((s) => s && (s.uniqueId === uid || s.name === saved));
+    if (mine) {
+      el.innerHTML = `🪷 <b>${escapeHtml(saved)}</b> đang ngồi chiếu số <b>${mine.seatIdx + 1}</b>`;
+      return;
+    }
+    const qIdx = (state.queue || []).findIndex((q) => q.uniqueId === uid || q.name === saved);
+    if (qIdx >= 0) {
+      el.innerHTML = `⏳ <b>${escapeHtml(saved)}</b> đang xếp hàng — vị trí <b>#${qIdx + 1}</b>`;
+      return;
+    }
+    el.innerHTML = `Đã ghi danh <b>${escapeHtml(saved)}</b> — bấm <b>Ghi Danh & Chọn Chiếu</b> để chọn chỗ`;
+  }
+
+  function renderSeatPicker() {
+    const state = window.TempleLocal?.getState();
+    if (!state || !Array.isArray(state.seats)) return;
+    const gridL = document.getElementById('seatGridL');
+    const gridR = document.getElementById('seatGridR');
+    if (!gridL || !gridR) return;
+    gridL.innerHTML = ''; gridR.innerHTML = '';
+    for (let i = 0; i < TOTAL_SEATS; i++) {
+      const occ = state.seats[i];
+      const btn = document.createElement('button');
+      btn.className = 'seat-cell';
+      const side = i < 24 ? 'L' : 'R';
+      const row = Math.floor((i % 24) / 6), col = i % 6;
+      btn.title = `Chiếu số ${i + 1} — hàng ${row + 1}, cột ${col + 1} ${side === 'L' ? 'trái' : 'phải'}`;
+      if (occ) {
+        btn.classList.add(isMe(occ) ? 'mine' : 'taken');
+        btn.innerHTML = `<span class="cell-num">${i + 1}</span><span class="cell-name">${escapeHtml(shortenName(occ.name, 8))}</span>`;
+        if (isMe(occ)) btn.title += ' — ghế của bạn';
+      } else {
+        btn.classList.add('free');
+        btn.innerHTML = `<span class="cell-num">${i + 1}</span>`;
+        btn.addEventListener('click', () => pickSeat(i));
+      }
+      (side === 'L' ? gridL : gridR).appendChild(btn);
+    }
+  }
+
+  async function pickSeat(idx) {
+    const nameEl = document.getElementById('inputDevoteeName');
+    const user = (nameEl?.value.trim()) || localStorage.getItem('chua_vt_name') || '';
+    if (!user) { toast('Hãy để lại pháp danh trước đã 🙏'); return; }
+    try { localStorage.setItem('chua_vt_name', user); } catch (_) { }
+    const res = await callRpc('temple.pickSeat', { user, seatIdx: idx });
+    if (res?.error === 'occupied') {
+      toast('Chiếu này vừa có người ngồi — chọn chỗ khác');
+      renderSeatPicker();
+    } else if (res?.seatIdx !== undefined) {
+      document.getElementById('seatModal')?.classList.remove('visible');
+      toast(`🪷 ${user} ngồi chiếu số ${res.seatIdx + 1} — Nam mô A Di Đà Phật`);
+    }
+  }
+
+  async function doRegister() {
+    const nameEl = document.getElementById('inputDevoteeName');
+    const user = nameEl?.value.trim() || '';
+    if (!user) {
+      toast('Người muốn ghi danh phải để lại pháp danh 🙏');
+      nameEl?.focus();
+      return;
+    }
+    try { localStorage.setItem('chua_vt_name', user); } catch (_) { }
+    const res = await callRpc('temple.register', { user });
+    refreshSeatStatus(res?.state);
+    if (res?.seatIdx !== undefined) {
+      toast(`Bạn đang ngồi chiếu số ${res.seatIdx + 1}`);
+    } else if (res?.queued) {
+      toast(`Đạo tràng đã kín 48/48 — ${user} đang xếp hàng vị trí #${res.position}`);
+    } else {
+      const modal = document.getElementById('seatModal');
+      if (modal) { renderSeatPicker(); modal.classList.add('visible'); }
+    }
+  }
+
+  let toastTimer = null;
+  function toast(msg) {
+    let el = document.getElementById('templeToast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'templeToast';
+      el.className = 'temple-toast';
+      wrapper.appendChild(el);
+    }
+    el.textContent = msg;
+    el.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('visible'), 3800);
+  }
+
+  // Thoát/đóng web → nhả ghế ngay, vào lại phải xếp hàng/chọn lại
+  function releaseMySeat() {
+    const saved = localStorage.getItem('chua_vt_name');
+    if (!saved || !window.TempleLocal) return;
+    window.TempleLocal.handleRpc('temple.leaveSeat', { user: saved });
+  }
+  window.addEventListener('pagehide', releaseMySeat);
+  window.addEventListener('beforeunload', releaseMySeat);
 
   // ---- nút HUD + dock ----
   const bind = (id, fn) => document.getElementById(id)?.addEventListener('click', fn);
@@ -862,6 +1140,12 @@ import { makeDevotee } from './chars3d.js';
   bind('btnRpcFortune', () => { const { user, wish } = getFormInput(); callRpc('temple.drawFortune', { user, topic: wish }); });
   bind('btnRpcGiftLotus', () => { const { user, wish } = getFormInput(); callRpc('temple.offerGift', { user, giftType: 'lotus', coins: 20, giftName: 'Đài Hoa Sen Vàng', wish }); });
   bind('btnRpcGrandCeremony', () => { const { user, wish } = getFormInput(); callRpc('temple.grandCeremony', { user, coins: 299, giftName: 'Đại Lễ Kim Long Chầu Phật', wish }); });
+  bind('btnRegister', doRegister);
+  bind('btnCloseSeatModal', () => document.getElementById('seatModal')?.classList.remove('visible'));
+  // bấm ra ngoài panel cũng đóng
+  document.getElementById('seatModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'seatModal') e.currentTarget.classList.remove('visible');
+  });
 
   let autoSimState = true;
   bind('btnToggleAutoSim', () => {
@@ -905,6 +1189,7 @@ import { makeDevotee } from './chars3d.js';
     TempleLocal.onEvent = ({ state, event }) => {
       if (state) updateUIState(state);
       if (event) triggerRitualVisuals(event);
+      refreshSeatStatus(state);
     };
     updateUIState(TempleLocal.getState());
   }
@@ -917,10 +1202,11 @@ import { makeDevotee } from './chars3d.js';
     requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
 
-    // thở nhẹ cho đạo tràng
-    for (let i = 0; i < seats.length; i++) {
-      const d = seats[i].devotee;
-      d.group.scale.y = (seats[i].baseScale || 1) * (1 + Math.sin(t * 1.4 + i * 0.7) * 0.008);
+    // thở nhẹ cho đạo tràng (chỉ người đang ngồi)
+    let bi = 0;
+    for (const sc of seatChars) {
+      if (sc.status !== 'seated' || !sc.devotee) continue;
+      sc.devotee.group.scale.y = 1 + Math.sin(t * 1.4 + bi++ * 0.7) * 0.008;
     }
 
     // khói hương bốc lên + uốn lượn

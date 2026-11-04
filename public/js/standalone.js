@@ -5,7 +5,8 @@
  */
 window.TEMPLE_STATIC = true;
 window.TempleLocal = (function () {
-  const STORAGE_KEY = 'chua_viteccons_state_v1';
+  const STORAGE_KEY = 'chua_viteccons_state_v2';
+  const TOTAL_SEATS = 48;
 
   // BỘ QUẺ LINH XĂM (bê nguyên từ server.js)
   const FORTUNE_DECK = [
@@ -113,32 +114,8 @@ window.TempleLocal = (function () {
     return cleaned;
   }
 
-  // Đạo tràng mở màn: anh chị em Viteccons vào chùa trước (để chánh điện không trống)
-  const SEED_DEVOTEES = [
-    { user: 'KS. Ngọc Anh', uniqueId: 'ngocanh.pkt', merit: 420, incense: 21, lastWish: 'Cầu các công trình bàn giao đúng tiến độ, an toàn tuyệt đối' },
-    { user: 'CN. Minh Quân', uniqueId: 'minhquan.ct', merit: 365, incense: 18, lastWish: 'Nam mô A Di Đà Phật, cầu an toàn lao động trên mọi công trường' },
-    { user: 'Diệu Thảo TC-HC', uniqueId: 'thao.tchc', merit: 310, incense: 15, lastWish: 'Cầu đại gia đình Viteccons đoàn kết, vạn sự như ý' },
-    { user: 'ĐT. Hoàng Nam', uniqueId: 'nam.doi', merit: 268, incense: 12, lastWish: 'Cầu thi công suôn sẻ, anh em no ấm bình an' },
-    { user: 'Chị Thanh Hà', uniqueId: 'thanhha.kt', merit: 215, incense: 12, lastWish: 'Cầu chủ đầu tư thanh toán đúng hạn, công ty phát đạt' },
-    { user: 'Vũ Đức Thịnh', uniqueId: 'ducthinh.vt', merit: 188, incense: 9, lastWish: 'Con xin gieo quẻ cầu tài lộc đầu năm cho gia đình' },
-    { user: 'Anh Bảy Cơ Khí', uniqueId: 'bay.cokhi', merit: 150, incense: 9, lastWish: 'Cầu gia đình mạnh khỏe, con cái học hành đỗ đạt' },
-    { user: 'Thím Sáu Bếp Ăn', uniqueId: 'sau.bepan', merit: 122, incense: 6, lastWish: 'Cầu anh em công trường ăn ngon khỏe mạnh' },
-    { user: 'Chú Tư Bảo Vệ', uniqueId: 'tu.baove', merit: 96, incense: 6, lastWish: 'Cầu trực đêm yên ả, mọi điều bình an vô sự' },
-    { user: 'Em Tám Hồ sơ', uniqueId: 'tam.hoso', merit: 68, incense: 3, lastWish: 'Cầu hồ sơ thầu trúng liên miên, giấy tờ thông suốt' },
-    { user: 'KS. Bảo Kết Cấu', uniqueId: 'bao.kc', merit: 60, incense: 3, lastWish: 'Cầu sắt thép vững chãi, bê tông đạt mác' },
-    { user: 'Anh Phong Giàn Giáo', uniqueId: 'phong.gg', merit: 55, incense: 3, lastWish: 'Cầu thao tác trên cao luôn an toàn tuyệt đối' },
-    { user: 'Chị Yến Vật Tư', uniqueId: 'yen.vt', merit: 50, incense: 3, lastWish: 'Cầu vật tư về đúng giá, không thất thoát' },
-    { user: 'CN. Vinh Điện Nước', uniqueId: 'vinh.dn', merit: 46, incense: 3, lastWish: 'Cầu hệ thống điện nước vận hành trơn tru' },
-    { user: 'Bác Lợi Lái Cẩu', uniqueId: 'loi.cau', merit: 42, incense: 3, lastWish: 'Cầu mỗi nhịp cẩu đều chuẩn xác, gió lành mây êm' },
-    { user: 'CN. Tấn Hàn', uniqueId: 'tan.han', merit: 38, incense: 3, lastWish: 'Cầu mối hàn chắc bền như lòng anh em' },
-    { user: 'KS. Dũng QS', uniqueId: 'dung.qs', merit: 34, incense: 3, lastWish: 'Cầu boq khớp từng hạng mục, thanh toán không trễ' },
-    { user: 'Anh Hòa An Toàn', uniqueId: 'hoa.at', merit: 30, incense: 3, lastWish: 'Cầu an toàn lao động, ai cũng về nhà bình an' },
-    { user: 'Chị Thu Kế Hoạch', uniqueId: 'thu.kh', merit: 27, incense: 3, lastWish: 'Cầu tiến độ chạy đúng, milestone không trượt' },
-    { user: 'Em Trang Thiết Kế', uniqueId: 'trang.tk', merit: 24, incense: 3, lastWish: 'Cầu bản vẽ shop drawing duyệt một lần qua' },
-    { user: 'CN. Cường Cốp Pha', uniqueId: 'cuong.cp', merit: 21, incense: 3, lastWish: 'Cầu cốp pha chắc tay, đổ bê tông mướt mặt' },
-    { user: 'KS. Tú Trắc Địa', uniqueId: 'tu.td', merit: 18, incense: 3, lastWish: 'Cầu tọa độ chuẩn từng milimet, không sai sót' }
-  ];
-
+  // Không còn ghế "ảo" seed sẵn — phật tử chỉ xuất hiện khi người thật vào chùa
+  // (autoSim mô phỏng dòng người đến-đi liên tục như chùa thật)
   const SIM_DEVOTEES = [
     { user: 'KS. Ngọc Anh', uniqueId: 'ngocanh.pkt', wish: 'Cầu công trình bàn giao đúng tiến độ, chất lượng Build by Heart' },
     { user: 'Trần Minh Quân', uniqueId: 'minhquan.ct', wish: 'Cầu an toàn lao động, không một tai nạn nào trên công trường' },
@@ -147,7 +124,27 @@ window.TempleLocal = (function () {
     { user: 'Phạm Thanh Hà', uniqueId: 'thanhha.kt', wish: 'Cầu thanh toán công nợ thông suốt, dòng tiền hanh thông' },
     { user: 'Vũ Đức Thịnh', uniqueId: 'ducthinh.vt', wish: 'Con xin gieo một quẻ cầu tài lộc đầu năm' },
     { user: 'Anh Bảy Cơ Khí', uniqueId: 'bay.cokhi', wish: 'Cầu máy móc vận hành trơn tru, hàng mục hoàn thành đẹp đẽ' },
-    { user: 'Chị Hằng Kế Toán', uniqueId: 'hang.kt', wish: 'Cầu quyết toán trôi chảy, số liệu khớp từng đồng' }
+    { user: 'Chị Hằng Kế Toán', uniqueId: 'hang.kt', wish: 'Cầu quyết toán trôi chảy, số liệu khớp từng đồng' },
+    { user: 'Thích An Toàn', uniqueId: 'sim.antoan', wish: 'Cầu an toàn lao động, ai cũng về nhà bình an' },
+    { user: 'Thích Trúng Thầu', uniqueId: 'sim.trungthau', wish: 'Cầu hồ sơ thầu trúng liên miên' },
+    { user: 'Thích Đổ Bê Tông', uniqueId: 'sim.betong', wish: 'Cầu bê tông đạt mác, cốt thép vững chãi' },
+    { user: 'Thích Nghiệm Thu', uniqueId: 'sim.nghiemthu', wish: 'Cầu nghiệm thu một lần qua, hồ sơ thông suốt' },
+    { user: 'KS. Bảo Kết Cấu', uniqueId: 'bao.kc', wish: 'Cầu sắt thép vững chãi, bê tông đạt mác' },
+    { user: 'Anh Phong Giàn Giáo', uniqueId: 'phong.gg', wish: 'Cầu thao tác trên cao luôn an toàn tuyệt đối' },
+    { user: 'Chị Yến Vật Tư', uniqueId: 'yen.vt', wish: 'Cầu vật tư về đúng giá, không thất thoát' },
+    { user: 'CN. Vinh Điện Nước', uniqueId: 'vinh.dn', wish: 'Cầu hệ thống điện nước vận hành trơn tru' },
+    { user: 'Bác Lợi Lái Cẩu', uniqueId: 'loi.cau', wish: 'Cầu mỗi nhịp cẩu đều chuẩn xác, gió lành mây êm' },
+    { user: 'CN. Tấn Hàn', uniqueId: 'tan.han', wish: 'Cầu mối hàn chắc bền như lòng anh em' },
+    { user: 'KS. Dũng QS', uniqueId: 'dung.qs', wish: 'Cầu boq khớp từng hạng mục, thanh toán không trễ' },
+    { user: 'Chị Thu Kế Hoạch', uniqueId: 'thu.kh', wish: 'Cầu tiến độ chạy đúng, milestone không trượt' },
+    { user: 'Em Trang Thiết Kế', uniqueId: 'trang.tk', wish: 'Cầu bản vẽ shop drawing duyệt một lần qua' },
+    { user: 'CN. Cường Cốp Pha', uniqueId: 'cuong.cp', wish: 'Cầu cốp pha chắc tay, đổ bê tông mướt mặt' },
+    { user: 'KS. Tú Trắc Địa', uniqueId: 'tu.td', wish: 'Cầu tọa độ chuẩn từng milimet, không sai sót' },
+    { user: 'Chú Tư Bảo Vệ', uniqueId: 'tu.baove', wish: 'Cầu trực đêm yên ả, mọi điều bình an vô sự' },
+    { user: 'Thím Sáu Bếp Ăn', uniqueId: 'sau.bepan', wish: 'Cầu anh em công trường ăn ngon khỏe mạnh' },
+    { user: 'Thích Giám Sát', uniqueId: 'sim.giamsat', wish: 'Cầu giám sát tinh tường, công trình vẹn toàn' },
+    { user: 'Thích Tiến Độ', uniqueId: 'sim.tiendo', wish: 'Cầu tiến độ như ý, bàn giao đúng hẹn' },
+    { user: 'Thích Tâm Tịnh', uniqueId: 'sim.tamtinh', wish: 'Cầu tâm an tịnh, vạn sự hanh thông' }
   ];
 
   const DEFAULT_STATE = () => ({
@@ -161,6 +158,8 @@ window.TempleLocal = (function () {
     haloIntensity: 0.45,
     offerings: { lotus: 3, fruit: 2, lamp: 2, dragon: 1 },
     devotees: {},
+    seats: Array(TOTAL_SEATS).fill(null),
+    queue: [],
     recentEvents: [],
     settings: {
       ttsEnabled: true,
@@ -174,51 +173,19 @@ window.TempleLocal = (function () {
     tiktok: { connected: false, connecting: false, username: '', roomId: null, viewerCount: 0, lastError: null }
   });
 
-  function seedState() {
-    const s = DEFAULT_STATE();
-    SEED_DEVOTEES.forEach((d) => {
-      s.devotees[d.uniqueId] = {
-        name: d.user,
-        uniqueId: d.uniqueId,
-        avatar: '',
-        merit: d.merit,
-        incense: d.incense,
-        gifts: 0,
-        lastWish: d.lastWish
-      };
-      s.totalMerit += d.merit;
-    });
-    return s;
-  }
-
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
         const base = DEFAULT_STATE();
-        const devotees = saved.devotees || {};
-        let addedMerit = 0;
-        // Gộp thêm phật tử Viteccons mới vào đạo tràng (giữ nguyên công đức người dùng)
-        SEED_DEVOTEES.forEach((d) => {
-          if (!devotees[d.uniqueId]) {
-            devotees[d.uniqueId] = {
-              name: d.user,
-              uniqueId: d.uniqueId,
-              avatar: '',
-              merit: d.merit,
-              incense: d.incense,
-              gifts: 0,
-              lastWish: d.lastWish
-            };
-            addedMerit += d.merit;
-          }
-        });
         return {
           ...base,
           ...saved,
-          totalMerit: (saved.totalMerit || 0) + addedMerit,
-          devotees,
+          // Ghế & hàng chờ luôn bắt đầu trống mỗi phiên — vào lại phải ghi danh/xếp hàng
+          seats: Array(TOTAL_SEATS).fill(null),
+          queue: [],
+          devotees: saved.devotees || {},
           offerings: { ...base.offerings, ...(saved.offerings || {}) },
           recentEvents: saved.recentEvents || [],
           settings: { ...base.settings, ...(saved.settings || {}), autoSim: true },
@@ -226,7 +193,7 @@ window.TempleLocal = (function () {
         };
       }
     } catch (_) { }
-    return seedState();
+    return DEFAULT_STATE();
   }
 
   let state = loadState();
@@ -280,9 +247,45 @@ window.TempleLocal = (function () {
     return dev;
   }
 
+  // ── Ghế & hàng chờ ──────────────────────────────────────────────────────────
+  function seatIndexOf(uniqueId, name) {
+    return state.seats.findIndex((s) => s && (s.uniqueId === uniqueId || s.name === name));
+  }
+  function freeSeatIndexes() {
+    const out = [];
+    for (let i = 0; i < TOTAL_SEATS; i++) if (!state.seats[i]) out.push(i);
+    return out;
+  }
+  function queueIndexOf(uniqueId, name) {
+    return state.queue.findIndex((q) => q.uniqueId === uniqueId || q.name === name);
+  }
+  function occupySeat(idx, dev, isSim) {
+    if (idx < 0 || idx >= TOTAL_SEATS || state.seats[idx]) return null;
+    state.seats[idx] = { name: dev.name, uniqueId: dev.uniqueId, isSim: !!isSim, seatedAt: Date.now() };
+    return pushEventLog({ type: 'seatTaken', seatIdx: idx, user: dev.name, uniqueId: dev.uniqueId, isSim: !!isSim });
+  }
+  // Nhả ghế rồi nhường cho người đầu hàng chờ (nếu có)
+  function vacateSeat(idx) {
+    const occ = state.seats[idx];
+    if (!occ) return null;
+    state.seats[idx] = null;
+    const evt = pushEventLog({ type: 'seatVacated', seatIdx: idx, user: occ.name, uniqueId: occ.uniqueId, isSim: occ.isSim });
+    promoteQueue(idx);
+    return evt;
+  }
+  function promoteQueue(preferredIdx = -1) {
+    if (!state.queue.length) return null;
+    let idx = (preferredIdx >= 0 && !state.seats[preferredIdx]) ? preferredIdx : freeSeatIndexes()[0];
+    if (idx === undefined) return null;
+    const next = state.queue.shift();
+    return occupySeat(idx, next, next.isSim);
+  }
+
   function pushEventLog(evt) {
+    if (evt.seatIdx === undefined && evt.type !== 'seatTaken' && evt.type !== 'seatVacated') {
+      evt.seatIdx = seatIndexOf(evt.uniqueId, evt.user);
+    }
     const entry = { id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, timestamp: new Date().toISOString(), ...evt };
-    state.recentEvents.unshift(entry);
     if (state.recentEvents.length > 35) state.recentEvents.length = 35;
     return entry;
   }
@@ -299,6 +302,9 @@ window.TempleLocal = (function () {
       haloIntensity: state.haloIntensity,
       offerings: state.offerings,
       leaderboard: getLeaderboard(24),
+      seats: state.seats.map((s, i) => (s ? { seatIdx: i, name: s.name, uniqueId: s.uniqueId, isSim: s.isSim } : null)),
+      queue: state.queue.map((q) => ({ name: q.name, uniqueId: q.uniqueId, isSim: q.isSim })),
+      totalSeats: TOTAL_SEATS,
       recentEvents: state.recentEvents.slice(0, 15),
       settings: state.settings,
       tiktok: state.tiktok,
@@ -424,24 +430,57 @@ window.TempleLocal = (function () {
     }
   };
 
-  // AUTO-SIMULATION — đạo tràng tự đi chùa để chánh điện luôn rộn ràng
+  // AUTO-SIMULATION — mô phỏng người thật đến chùa: xếp hàng → ngồi ghế → lên thắp hương → ra về
   let autoSimTimer = null;
   function runSingleSimulationStep() {
-    const pick = SIM_DEVOTEES[Math.floor(Math.random() * SIM_DEVOTEES.length)];
-    const roll = Math.random();
-    let res;
-    if (roll < 0.30) {
-      res = Rituals.burnIncense({ user: pick.user, uniqueId: pick.uniqueId, count: 3, wish: pick.wish, readTts: false });
-    } else if (roll < 0.55) {
-      res = Rituals.sendPrayer({ user: pick.user, uniqueId: pick.uniqueId, wish: pick.wish, readTts: false });
-    } else if (roll < 0.75) {
-      res = Rituals.drawFortune({ user: pick.user, uniqueId: pick.uniqueId, topic: pick.wish, readTts: false });
-    } else if (roll < 0.90) {
-      res = Rituals.offerGift({ user: pick.user, uniqueId: pick.uniqueId, giftType: 'lotus', coins: 15, giftName: 'Hoa Sen Vàng Tinh Khiết', readTts: false });
-    } else {
-      res = Rituals.ringBell({ user: pick.user, uniqueId: pick.uniqueId, count: 1, wish: pick.wish, readTts: false });
+    // 1) Có người chờ + có ghế trống → ưu tiên cho vào ghế trước
+    if (state.queue.length && freeSeatIndexes().length) {
+      const e = promoteQueue();
+      if (e) emit(e); else saveState();
+      return;
     }
-    emit(res.event);
+    const roll = Math.random();
+    const seatedSimIdxs = [];
+    state.seats.forEach((s, i) => { if (s && s.isSim) seatedSimIdxs.push(i); });
+    const idleSims = SIM_DEVOTEES.filter((d) => seatIndexOf(d.uniqueId, d.user) < 0 && queueIndexOf(d.uniqueId, d.user) < 0);
+
+    // 2) Khách mới đến chùa (~40%) — chỉ khi hàng chờ chưa quá dài
+    if (roll < 0.40 && idleSims.length && state.queue.length < 8) {
+      const pick = idleSims[Math.floor(Math.random() * idleSims.length)];
+      const free = freeSeatIndexes();
+      if (free.length) {
+        emit(occupySeat(free[Math.floor(Math.random() * free.length)], pick, true));
+      } else {
+        state.queue.push({ name: pick.user, uniqueId: pick.uniqueId, isSim: true });
+        emit(pushEventLog({ type: 'queued', user: pick.user, uniqueId: pick.uniqueId, position: state.queue.length, isSim: true }));
+      }
+      return;
+    }
+    // 3) Phật tử đang ngồi lên dâng hương (~82%)
+    if (roll < 0.88 && seatedSimIdxs.length) {
+      const idx = seatedSimIdxs[Math.floor(Math.random() * seatedSimIdxs.length)];
+      const occ = state.seats[idx];
+      const pick = SIM_DEVOTEES.find((d) => d.uniqueId === occ.uniqueId) || { user: occ.name, uniqueId: occ.uniqueId, wish: 'Nam mô A Di Đà Phật, cầu gia đình bình an' };
+      const r = Math.random();
+      let res;
+      if (r < 0.34) {
+        res = Rituals.burnIncense({ user: pick.user, uniqueId: pick.uniqueId, count: 3, wish: pick.wish, readTts: false });
+      } else if (r < 0.56) {
+        res = Rituals.sendPrayer({ user: pick.user, uniqueId: pick.uniqueId, wish: pick.wish, readTts: false });
+      } else if (r < 0.72) {
+        res = Rituals.drawFortune({ user: pick.user, uniqueId: pick.uniqueId, topic: pick.wish, readTts: false });
+      } else if (r < 0.88) {
+        res = Rituals.offerGift({ user: pick.user, uniqueId: pick.uniqueId, giftType: 'lotus', coins: 15, giftName: 'Hoa Sen Vàng Tinh Khiết', readTts: false });
+      } else {
+        res = Rituals.ringBell({ user: pick.user, uniqueId: pick.uniqueId, count: 1, wish: pick.wish, readTts: false });
+      }
+      emit(res.event);
+      return;
+    }
+    // 4) Phật tử công phu xong ra về — nhả ghế cho người xếp hàng
+    if (seatedSimIdxs.length) {
+      emit(vacateSeat(seatedSimIdxs[Math.floor(Math.random() * seatedSimIdxs.length)]));
+    }
   }
 
   function configureAutoSim(enabled) {
@@ -466,6 +505,53 @@ window.TempleLocal = (function () {
       case 'temple.drawFortune': return Rituals.drawFortune(params);
       case 'temple.grandCeremony': return Rituals.grandCeremony(params);
       case 'temple.updateSettings': return Rituals.updateSettings(params);
+      case 'temple.register': {
+        // Ghi danh pháp danh → biết mình đang ở ghế / hàng chờ / cần chọn ghế
+        const name = sanitizeUserName(params.user);
+        const uniqueId = params.uniqueId || name.toLowerCase().replace(/\s+/g, '');
+        const seated = seatIndexOf(uniqueId, name);
+        if (seated >= 0) return { state: getPublicState(), registered: true, seatIdx: seated };
+        const qIdx = queueIndexOf(uniqueId, name);
+        if (qIdx >= 0) return { state: getPublicState(), registered: true, queued: true, position: qIdx + 1 };
+        const free = freeSeatIndexes();
+        if (!free.length) {
+          state.queue.push({ name, uniqueId, isSim: false });
+          const evt = pushEventLog({ type: 'queued', user: name, uniqueId, position: state.queue.length, isSim: false });
+          saveState();
+          return { event: evt, state: getPublicState(), registered: true, queued: true, position: state.queue.length };
+        }
+        recordDevotee(name, '', '', 0, 0, 0); // key = tên hiển thị, trùng với record nghi thức
+        saveState();
+        return { state: getPublicState(), registered: true, needPick: true, freeSeats: free };
+      }
+      case 'temple.pickSeat': {
+        const name = sanitizeUserName(params.user);
+        const uniqueId = params.uniqueId || name.toLowerCase().replace(/\s+/g, '');
+        const idx = Number(params.seatIdx);
+        if (seatIndexOf(uniqueId, name) >= 0) {
+          return { state: getPublicState(), seatIdx: seatIndexOf(uniqueId, name), alreadySeated: true };
+        }
+        if (idx < 0 || idx >= TOTAL_SEATS || state.seats[idx]) {
+          return { state: getPublicState(), error: 'occupied', freeSeats: freeSeatIndexes() };
+        }
+        const qi = queueIndexOf(uniqueId, name);
+        if (qi >= 0) state.queue.splice(qi, 1);
+        const evt = occupySeat(idx, { name, uniqueId }, false);
+        saveState();
+        return { event: evt, state: getPublicState(), seatIdx: idx };
+      }
+      case 'temple.leaveSeat': {
+        // Thoát web = mất ghế; vào lại phải xếp hàng/chọn lại
+        const name = sanitizeUserName(params.user);
+        const uniqueId = params.uniqueId || name.toLowerCase().replace(/\s+/g, '');
+        const idx = seatIndexOf(uniqueId, name);
+        const qi = queueIndexOf(uniqueId, name);
+        let evt = null;
+        if (qi >= 0) state.queue.splice(qi, 1);
+        if (idx >= 0) evt = vacateSeat(idx);
+        saveState();
+        return { event: evt, state: getPublicState() };
+      }
       case 'live.setAutoSim':
         configureAutoSim(Boolean(params.enabled));
         saveState();

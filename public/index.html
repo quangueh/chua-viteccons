@@ -34,6 +34,9 @@
         </div>
         <div class="top-Right-badges">
           <div class="mini-stat-pill">
+            🪷 <strong id="statSeats">0/48</strong> chiếu • ⏳ <strong id="statQueue">0</strong> chờ
+          </div>
+          <div class="mini-stat-pill">
             🔥 <strong id="statIncense">108</strong> hương • ✨ <strong id="statMerit">1,080</strong> CĐ
           </div>
         </div>
@@ -105,6 +108,32 @@
           <div class="fortune-meaning" id="fortuneMeaning"></div>
         </div>
       </div>
+
+      <!-- MODAL CHỌN CHIẾU (kiểu ghế rạp phim — đúng 48 chỗ) -->
+      <div class="seat-modal-overlay" id="seatModal">
+        <div class="seat-panel glass-panel">
+          <div class="seat-panel-title">🪷 CHỌN CHIẾU NGỒI — 48 CHỖ</div>
+          <div class="seat-panel-sub" id="seatModalSub">Bàn thờ Tam Bảo ở phía trên • chọn một chiếu còn trống</div>
+          <div class="seat-altar-line">🛕 ─── BÀN THỜ ĐỨC PHẬT A DI ĐÀ ─── 🛕</div>
+          <div class="seat-map">
+            <div class="seat-wing">
+              <div class="seat-wing-name">BÊN TRÁI</div>
+              <div class="seat-grid" id="seatGridL"></div>
+            </div>
+            <div class="seat-aisle">✦<br />✦<br />✦<br />✦<br />✦<br />✦</div>
+            <div class="seat-wing">
+              <div class="seat-wing-name">BÊN PHẢI</div>
+              <div class="seat-grid" id="seatGridR"></div>
+            </div>
+          </div>
+          <div class="seat-legend">
+            <span><i class="lg free"></i> Trống</span>
+            <span><i class="lg taken"></i> Đã có người</span>
+            <span><i class="lg mine"></i> Của bạn</span>
+          </div>
+          <button class="dock-btn seat-close" id="btnCloseSeatModal">Để Sau</button>
+        </div>
+      </div>
     </div>
 
     <!-- ====================================================================
@@ -142,9 +171,15 @@
       </div>
 
       <div class="dock-section">
-        <div class="dock-section-title">🙏 Thành Tâm Dâng Lễ</div>
+        <div class="dock-section-title">🪷 Ghi Danh Vào Chùa</div>
         <input type="text" id="inputDevoteeName" class="dock-input"
-          placeholder="Tên thí chủ (VD: Anh Tuấn - P.Kỹ Thuật)..." />
+          placeholder="Pháp danh của bạn (VD: Thích An Nhiên)..." />
+        <button class="dock-btn gold" id="btnRegister">🪷 Ghi Danh & Chọn Chiếu</button>
+        <div class="seat-status" id="seatStatus">Chưa ghi danh — để lại pháp danh để chọn chiếu</div>
+      </div>
+
+      <div class="dock-section">
+        <div class="dock-section-title">🙏 Thành Tâm Dâng Lễ</div>
         <input type="text" id="inputDevoteeWish" class="dock-input" placeholder="Lời cầu nguyện..." />
 
         <div class="dock-grid-2">
