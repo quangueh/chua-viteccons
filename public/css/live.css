@@ -1933,9 +1933,8 @@ html.need-name .name-gate-overlay {
 }
 
 .gate-logo {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
+  width: 96px;
+  height: auto;
   margin-bottom: 10px;
   filter: drop-shadow(0 4px 14px rgba(255, 190, 90, 0.35));
 }
