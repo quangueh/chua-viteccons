@@ -149,9 +149,10 @@
     if (sig === lastRenderedLeaderboardJson && congregationHall.children.length > 0) return;
     lastRenderedLeaderboardJson = sig;
 
-    // Ưu tiên gắn thẻ tên vào các ghế gần thảm đỏ dễ nhìn nhất
+    // Ưu tiên gắn thẻ tên bảng vàng vào các ghế gần thảm đỏ dễ nhìn nhất
     const labeledSeatIndices = [
-      3, 4, 11, 12, 19, 20, 27, 28, 35, 36, 2, 5, 10, 13, 18, 21, 26, 29
+      3, 4, 11, 12, 19, 20, 27, 28, 35, 36, 2, 5, 10, 13, 18, 21, 26, 29,
+      34, 37, 0, 7, 8, 15, 16, 23, 24, 31, 32, 39, 1, 6, 9, 14, 17, 22, 25, 30, 33, 38
     ];
     const seatViewerMap = new Map();
     hallViewers.forEach((viewer, idx) => {
@@ -160,20 +161,27 @@
       }
     });
 
+    // Chú tiểu nào cũng có tên: ghế trống bảng vàng thì gán tên phật tử Viteccons
+    const HALL_NAME_POOL = [
+      'Anh Tâm', 'Chị Nga', 'KS. Bảo', 'CN. Tài', 'Thím Ba', 'Chú Hai', 'Em Nhân', 'Cô Lan',
+      'Bác Hùng', 'Dì Tư', 'KS. Phong', 'Anh Trí', 'Chị Yến', 'Em Khôi', 'Bác Năm', 'Thím Năm',
+      'Chú Sáu', 'CN. Vinh', 'KS. Hải', 'Anh Đức', 'Chị Phượng', 'Em Linh', 'Bác Lợi', 'Dì Chin',
+      'Chú Mười', 'CN. Tấn', 'KS. Dũng', 'Anh Hòa', 'Chị Thu', 'Em Trang', 'Bác Bảy', 'Thím Tám',
+      'KS. Kha', 'CN. Luận', 'Anh Nghĩa', 'Chị Diễm', 'Em Phát', 'Bác Thảo', 'CN. Cường', 'KS. Tú'
+    ];
+
     congregationHall.innerHTML = HALL_SEAT_COORDS.map((seat, idx) => {
       const viewer = seatViewerMap.get(idx);
-      const badgeHtml = viewer
-        ? `
+      const seatName = viewer ? viewer.name : HALL_NAME_POOL[idx % HALL_NAME_POOL.length];
+      const badgeHtml = `
           <div class="seat-badge">
-            <span class="seat-avatar">${
-              viewer.avatar
-                ? `<img src="${escapeHtml(viewer.avatar)}" alt="" />`
-                : escapeHtml(String(viewer.name || 'P').charAt(0).toUpperCase())
-            }</span>
-            <span class="seat-username">${escapeHtml(shortenName(viewer.name, 11))}</span>
+            <span class="seat-avatar">${viewer && viewer.avatar
+          ? `<img src="${escapeHtml(viewer.avatar)}" alt="" />`
+          : escapeHtml(String(seatName || 'P').charAt(0).toUpperCase())
+        }</span>
+            <span class="seat-username">${escapeHtml(shortenName(seatName, 11))}</span>
           </div>
-        `
-        : '';
+        `;
 
       return `
         <div
@@ -404,15 +412,15 @@
     } else {
       liveDot.classList.remove('connected');
       liveText.textContent = st.settings?.autoSim
-        ? 'CHÙA LINH ỨNG • TỰ ĐỘNG GIẢ LẬP ĐÔNG NGƯỜI'
-        : 'CHÙA LINH ỨNG • ĐỨC PHẬT A DI ĐÀ';
+        ? 'CHÙA VITECCONS • ĐẠO TRÀNG ĐANG TỤNG KINH'
+        : 'CHÙA VITECCONS • ĐỨC PHẬT A DI ĐÀ';
     }
 
     const btnAutoSim = document.getElementById('btnToggleAutoSim');
     if (btnAutoSim && st.settings) {
       btnAutoSim.textContent = st.settings.autoSim
-        ? '🤖 Tự động Giả lập Người Xem: ĐANG BẬT'
-        : '🤖 Tự động Giả lập Người Xem: TẮT';
+        ? '🏮 Đạo Tràng Tự Đi Chùa: ĐANG BẬT'
+        : '🏮 Đạo Tràng Tự Đi Chùa: TẮT';
       btnAutoSim.classList.toggle('active-toggle', Boolean(st.settings.autoSim));
     }
     if (st.settings) {
@@ -615,6 +623,15 @@
   let rpcId = 1;
 
   function connectWebSocket() {
+    // Bản tĩnh (Vercel): dùng engine chạy ngay trong trình duyệt, không cần server
+    if (window.TempleLocal) {
+      TempleLocal.onEvent = ({ state, event }) => {
+        if (state) updateUIState(state);
+        if (event) triggerRitualVisuals(event);
+      };
+      updateUIState(TempleLocal.getState());
+      return;
+    }
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(`${proto}//${window.location.host}/ws`);
 
@@ -634,7 +651,7 @@
             });
           }
         }
-      } catch (_) {}
+      } catch (_) { }
     };
 
     ws.onclose = () => {
@@ -645,6 +662,12 @@
 
   async function callRpc(method, params = {}) {
     audio.ensureContext();
+    if (window.TempleLocal) {
+      const res = TempleLocal.handleRpc(method, params);
+      if (res?.state) updateUIState(res.state);
+      if (res?.event) triggerRitualVisuals(res.event);
+      return res;
+    }
     const payload = {
       jsonrpc: '2.0',
       id: rpcId++,
@@ -667,10 +690,18 @@
   }
 
   function getFormInput() {
-    const user = document.getElementById('inputDevoteeName')?.value.trim() || 'Quỳnh_Finn';
-    const wish =
-      document.getElementById('inputDevoteeWish')?.value.trim() ||
-      'Cầu cho gia đình bình an, tài lộc hanh thông';
+    const savedName = localStorage.getItem('chua_vt_name') || '';
+    const savedWish = localStorage.getItem('chua_vt_wish') || '';
+    const nameEl = document.getElementById('inputDevoteeName');
+    const wishEl = document.getElementById('inputDevoteeWish');
+    if (nameEl && savedName && !nameEl.value.trim()) nameEl.value = savedName;
+    if (wishEl && savedWish && !wishEl.value.trim()) wishEl.value = savedWish;
+    const user = nameEl?.value.trim() || 'Thí Chủ Viteccons';
+    const wish = wishEl?.value.trim() || 'Cầu cho gia đình bình an, công trình thuận lợi';
+    try {
+      localStorage.setItem('chua_vt_name', user);
+      localStorage.setItem('chua_vt_wish', wish);
+    } catch (_) { }
     return { user, wish };
   }
 

@@ -1,14 +1,21 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chùa Linh Ứng Online — TikTok Live RPC (Đức Phật A Di Đà 9:16)</title>
+  <title>Chùa Viteccons Online — Chánh Điện Đức Phật A Di Đà</title>
+  <meta name="description"
+    content="Chùa Viteccons Online — chánh điện trực tuyến cho anh em Viteccons vào dâng hương, cầu an, xin xăm. Build by Heart." />
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Noto+Serif:wght@700;900&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Noto+Serif:wght@700;900&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="/css/live.css" />
 </head>
+
 <body>
   <div class="app-workspace">
     <!-- ====================================================================
@@ -17,11 +24,7 @@
     <div class="stage-wrapper" id="stageWrapper">
       <div class="stage-9x16" id="stage9x16">
         <!-- 1. HÌNH NỀN CHÁNH ĐIỆN ĐỨC PHẬT A DI ĐÀ 8K SẮC NÉT -->
-        <img
-          src="/assets/amitabha_stage.png"
-          alt="Đức Phật A Di Đà Chánh Điện"
-          class="sanctuary-bg-img"
-        />
+        <img src="/assets/amitabha_stage.jpg" alt="Đức Phật A Di Đà Chánh Điện" class="sanctuary-bg-img" />
 
         <!-- 1B. HỆ THỐNG HÀO QUANG ĐỨC PHẬT A DI ĐÀ (XOAY CHUYỂN VẠN TRƯỢNG, KHÔNG CHE MẶT PHẬT) -->
         <div class="buddha-halo-system" id="buddhaHaloSystem">
@@ -48,8 +51,9 @@
         <!-- 2. THANH TRẠNG THÁI MỎNG TRÊN ĐỈNH (KHÔNG CHE TƯỢNG PHẬT) -->
         <header class="minimal-top-bar">
           <div class="live-pill" id="liveStatusPill">
+            <img src="/assets/viteccons_mark.png" alt="Viteccons" class="brand-mark" />
             <span class="live-dot" id="liveDot"></span>
-            <span id="liveStatusText">CHÙA LINH ỨNG • ĐỨC PHẬT A DI ĐÀ</span>
+            <span id="liveStatusText">CHÙA VITECCONS • ĐỨC PHẬT A DI ĐÀ</span>
           </div>
           <div class="top-Right-badges">
             <div class="mini-stat-pill">
@@ -84,7 +88,7 @@
         <!-- 4. CHỦ LỄ ĐANG DÂNG HƯƠNG TRƯỚC LƯ HƯƠNG ĐỒNG (GIỮA CHÁNH ĐIỆN) -->
         <div class="central-worshipper" id="centralWorshipper">
           <div class="worshipper-wish-bubble" id="centralWishBubble">
-            “Cầu gia đình bình an, vạn sự cát tường như ý”
+            “Cầu công trình an toàn, gia đình bình an, vạn sự như ý”
           </div>
           <div class="central-sprite-stack" id="centralSpriteStack">
             <img src="/assets/devotee_walk.png" data-pose="walk1" class="devotee-sprite pose-frame" alt="" />
@@ -94,12 +98,13 @@
             <img src="/assets/devotee_bow.png" data-pose="forehead" class="devotee-sprite pose-frame" alt="" />
             <img src="/assets/devotee_bow_mid.png" data-pose="bowMid" class="devotee-sprite pose-frame" alt="" />
             <img src="/assets/devotee_prostrate.png" data-pose="prostrate" class="devotee-sprite pose-frame" alt="" />
-            <img src="/assets/devotee_prostrate_deep.png" data-pose="prostrateDeep" class="devotee-sprite pose-frame" alt="" />
+            <img src="/assets/devotee_prostrate_deep.png" data-pose="prostrateDeep" class="devotee-sprite pose-frame"
+              alt="" />
           </div>
           <div class="name-tag central-name-tag">
             <div class="tag-avatar" id="centralAvatar">🙏</div>
             <div class="tag-texts">
-              <div class="tag-name" id="centralName">Thí Chủ Minh Tâm</div>
+              <div class="tag-name" id="centralName">Thí Chủ Viteccons</div>
               <div class="tag-sub" id="centralAction">✨ Dâng hương • +15 Công Đức</div>
             </div>
           </div>
@@ -126,7 +131,7 @@
           <div class="hud-left-col">
             <div class="hud-active-notice" id="hudActiveNotice">
               <span class="flower-bullet">💮</span>
-              <strong id="devoteeNameLine">Thí Chủ Minh Tâm</strong>
+              <strong id="devoteeNameLine">Thí Chủ Viteccons</strong>
               <span>—</span>
               <span id="devoteeActionTag">Dâng hương cầu bình an</span>
               <span class="flower-bullet">💮</span>
@@ -134,7 +139,7 @@
 
             <div class="hud-gift-cards">
               <div class="hud-gift-card" id="cardIncense" title="Bấm để Thắp hương">
-                <div class="gift-coin-tag">1 COIN / CMT</div>
+                <div class="gift-coin-tag">THÀNH TÂM</div>
                 <div class="gift-card-body">
                   <span class="gift-emoji">🔥</span>
                   <span class="gift-title">Dâng hương</span>
@@ -142,7 +147,7 @@
               </div>
 
               <div class="hud-gift-card" id="cardBlessing" title="Bấm để Cầu phúc & Thả hoa đăng">
-                <div class="gift-coin-tag">5 COINS / TIM</div>
+                <div class="gift-coin-tag">MIỄN PHÍ</div>
                 <div class="gift-card-body">
                   <span class="gift-emoji">🏮</span>
                   <span class="gift-title">Cầu phúc</span>
@@ -150,7 +155,7 @@
               </div>
 
               <div class="hud-gift-card" id="cardLotus" title="Bấm để Dâng Hoa Sen Vàng">
-                <div class="gift-coin-tag">10+ COINS</div>
+                <div class="gift-coin-tag">PHÁT TÂM</div>
                 <div class="gift-card-body">
                   <span class="gift-emoji">🪷</span>
                   <span class="gift-title">Hoa sen</span>
@@ -186,12 +191,12 @@
     </div>
 
     <!-- ====================================================================
-         BẢNG ĐIỀU KHIỂN NHANH RPC & GIẢ LẬP TRỰC TIẾP (ẨN KHI ?obs=1)
+         BẢNG THÀNH TÂM DÂNG LỄ (ẨN KHI ?obs=1)
          ==================================================================== -->
     <aside class="quick-dock" id="quickDock">
       <div class="dock-header">
-        <div class="dock-title">🎛️ Điều Khiển Live & RPC</div>
-        <a href="/admin" target="_blank" class="dock-link">Mở Admin Đầy Đủ ↗</a>
+        <img src="/assets/viteccons_logo.png" alt="Viteccons" class="dock-brand-logo" />
+        <div class="dock-title">🙏 Chùa Viteccons Online</div>
       </div>
 
       <div class="dock-section">
@@ -220,20 +225,10 @@
       </div>
 
       <div class="dock-section">
-        <div class="dock-section-title">📡 Kết Nối Phòng TikTok Live</div>
-        <div class="dock-input-row">
-          <input type="text" id="inputTikTokUser" class="dock-input" value="@zenfacts_vn" placeholder="Nhập @username hoặc link TikTok Live..." />
-          <button class="dock-btn gold" id="btnConnectTikTok">Kết Nối</button>
-        </div>
-        <button class="dock-btn" id="btnToggleAutoSim">
-          🤖 Tự động Giả lập Người Xem: TẮT
-        </button>
-      </div>
-
-      <div class="dock-section">
-        <div class="dock-section-title">🙏 Kích Hoạt Nghi Thức Tương Tác (RPC)</div>
-        <input type="text" id="inputDevoteeName" class="dock-input" value="Quỳnh_Finn" placeholder="Tên người xem / Thí chủ..." />
-        <input type="text" id="inputDevoteeWish" class="dock-input" value="Cầu cho gia đình bình an, tài lộc hanh thông, vạn sự như ý" placeholder="Lời cầu nguyện..." />
+        <div class="dock-section-title">� Thành Tâm Dâng Lễ</div>
+        <input type="text" id="inputDevoteeName" class="dock-input"
+          placeholder="Tên thí chủ (VD: Anh Tuấn - P.Kỹ Thuật)..." />
+        <input type="text" id="inputDevoteeWish" class="dock-input" placeholder="Lời cầu nguyện..." />
 
         <div class="dock-grid-2">
           <button class="dock-btn gold" id="btnRpcIncense">🔥 Thắp 3 Nén Hương</button>
@@ -244,19 +239,28 @@
           <button class="dock-btn" id="btnRpcGiftLotus">🪷 Dâng Hoa Sen Vàng</button>
         </div>
         <button class="dock-btn gold" id="btnRpcGrandCeremony">
-          🐉 Đại Lễ Kim Long Chầu Phật (Quà Lớn)
+          🐉 Đại Lễ Kim Long Chầu Phật
+        </button>
+        <button class="dock-btn" id="btnToggleAutoSim">
+          🏮 Đạo Tràng Tự Đi Chùa: ĐANG BẬT
         </button>
       </div>
 
       <div class="dock-section">
-        <div class="dock-section-title">📜 Nhật Ký Tương Tác Gần Nhất</div>
+        <div class="dock-section-title">📜 Nhật Ký Công Đức Gần Nhất</div>
         <div class="event-feed" id="eventFeed"></div>
+      </div>
+
+      <div class="dock-footer">
+        Build by Heart ❤️ Powered by Viteccons
       </div>
     </aside>
   </div>
 
+  <script src="/js/standalone.js"></script>
   <script src="/js/audio.js"></script>
   <script src="/js/particles.js"></script>
   <script src="/js/live.js"></script>
 </body>
+
 </html>

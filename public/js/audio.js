@@ -63,7 +63,7 @@ class TempleAudioEngine {
     this.bgBaseVolume = v;
     try {
       localStorage.setItem('temple_music_vol', String(v));
-    } catch (_) {}
+    } catch (_) { }
     if (this.bgAudio && !this.useSynthMusicFallback) {
       this.bgAudio.volume = this.ttsPlaying ? this.getDuckedVolume() : this.bgBaseVolume;
     }
@@ -75,7 +75,7 @@ class TempleAudioEngine {
     this.ttsVolume = v;
     try {
       localStorage.setItem('temple_tts_vol', String(v));
-    } catch (_) {}
+    } catch (_) { }
     if (this.currentAudio) {
       this.currentAudio.volume = this.ttsVolume;
     }
@@ -136,7 +136,7 @@ class TempleAudioEngine {
         };
         osc.start(now);
         osc.stop(now + 4.25);
-      } catch (_) {}
+      } catch (_) { }
     };
     playZenNote();
     this.synthBgTimer = setInterval(playZenNote, 3600);
@@ -145,7 +145,7 @@ class TempleAudioEngine {
   stopZenAmbience() {
     try {
       this.bgAudio.pause();
-    } catch (_) {}
+    } catch (_) { }
     if (this.synthBgTimer) {
       clearInterval(this.synthBgTimer);
       this.synthBgTimer = null;
@@ -158,7 +158,7 @@ class TempleAudioEngine {
       if (!this.useSynthMusicFallback && this.bgAudio) {
         this.bgAudio.volume = ducked ? this.getDuckedVolume() : this.bgBaseVolume;
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // --------------------------------------------------------------------------
@@ -200,7 +200,7 @@ class TempleAudioEngine {
 
       osc1.start(now);
       osc1.stop(now + 0.16);
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // --------------------------------------------------------------------------
@@ -244,7 +244,7 @@ class TempleAudioEngine {
         osc.start(now);
         osc.stop(now + p.decay + 0.05);
       });
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // --------------------------------------------------------------------------
@@ -287,7 +287,7 @@ class TempleAudioEngine {
         osc.start(now + idx * 0.1);
         osc.stop(now + idx * 0.1 + 1.15);
       });
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // --------------------------------------------------------------------------
@@ -334,6 +334,9 @@ class TempleAudioEngine {
   }
 
   async fetchZeroTtsAudio(text, voice = 'maichi') {
+    if (window.TEMPLE_STATIC) {
+      return { ok: false, error: 'static-mode' };
+    }
     try {
       const res = await fetch('/api/tts', {
         method: 'POST',
@@ -373,8 +376,11 @@ class TempleAudioEngine {
         await this.playWavUrl(audioUrl);
         if (item.onEnd) item.onEnd();
       } else {
-        if (item.onStart) item.onStart();
-        if (item.onEnd) setTimeout(item.onEnd, 5500);
+        const spoke = await this.speakBrowserTts(item);
+        if (!spoke) {
+          if (item.onStart) item.onStart();
+          if (item.onEnd) setTimeout(item.onEnd, 5500);
+        }
       }
     } catch (err) {
       console.warn('[ZeroTTS Playback Warning]', err);
@@ -391,6 +397,55 @@ class TempleAudioEngine {
         setTimeout(() => this.processTtsQueue(), 250);
       }
     }
+  }
+
+  // Đọc lời khấn bằng giọng tiếng Việt có sẵn trong trình duyệt (bản tĩnh, không ZeroTTS)
+  speakBrowserTts(item) {
+    return new Promise((resolve) => {
+      try {
+        const synth = window.speechSynthesis;
+        if (!synth || !item.text) return resolve(false);
+        const utter = new SpeechSynthesisUtterance(item.text);
+        utter.lang = 'vi-VN';
+        const voices = synth.getVoices() || [];
+        const viVoice = voices.find((v) => (v.lang || '').toLowerCase().startsWith('vi'));
+        if (viVoice) utter.voice = viVoice;
+        utter.rate = 0.95;
+        utter.volume = this.ttsVolume;
+
+        let finished = false;
+        const done = (ok) => {
+          if (finished) return;
+          finished = true;
+          resolve(ok);
+        };
+        utter.onstart = () => {
+          this.setBgDucking(true);
+          if (this.onTtsStateChange) {
+            this.onTtsStateChange({ speaking: true, synthesizing: false, text: item.text });
+          }
+          if (item.onStart) item.onStart();
+        };
+        utter.onend = () => {
+          if (item.onEnd) item.onEnd();
+          done(true);
+        };
+        utter.onerror = () => {
+          if (item.onEnd) item.onEnd();
+          done(true);
+        };
+        synth.speak(utter);
+        // Cần an toàn: nếu trình duyệt nuốt sự kiện end thì tự giải phóng hàng đợi
+        setTimeout(() => {
+          if (!finished) {
+            if (item.onEnd) item.onEnd();
+            done(true);
+          }
+        }, Math.max(8000, item.text.length * 110));
+      } catch (_) {
+        resolve(false);
+      }
+    });
   }
 
   playWavUrl(url) {
