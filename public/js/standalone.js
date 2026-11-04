@@ -237,17 +237,14 @@ window.TempleLocal = (function () {
 
   function getPublicState() {
     const r = sharedRoster();
-    // bảng công đức = người thật đang trong chùa (kể cả mình), xếp theo công đức phiên
-    const live = r.people
-      .filter((p) => p.name)
-      .map((p) => ({ name: p.name, uniqueId: p.sid, merit: p.merit || 0 }));
-    const known = new Set(live.map((p) => p.name));
-    const merged = [...live];
-    for (const d of getLeaderboard(24)) {
-      if (!known.has(d.name)) merged.push(d);
-    }
-    merged.sort((a, b) => b.merit - a.merit);
-    const board = merged.slice(0, 24).map((d, i) => ({ ...d, rank: i + 1 }));
+    // bảng công đức = CHỈ người đang ngồi chiếu (sid nằm trong sơ đồ ghế thật) —
+    // người đứng xem / xếp hàng / đã về không lên bảng
+    const seatedSids = new Set(r.seats.filter(Boolean).map((s) => s.uniqueId));
+    const board = r.people
+      .filter((p) => p.name && seatedSids.has(p.sid))
+      .sort((a, b) => (b.merit || 0) - (a.merit || 0))
+      .slice(0, 24)
+      .map((p, i) => ({ name: p.name, uniqueId: p.sid, merit: p.merit || 0, rank: i + 1 }));
     // nhật ký: sự kiện local + nghi thức của người khác
     const remote = (net() ? net().recentRits : []).map((ev) => ({ ...ev, ts: ev.ts || 0 }));
     const feed = [...state.recentEvents.map((e) => ({ ...e, ts: e.ts || Date.parse(e.timestamp) || 0 })), ...remote]

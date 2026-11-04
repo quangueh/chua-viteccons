@@ -24,8 +24,13 @@ const _meritCaps = new Map(); // sid -> {m, t} — clamp merit tăng quá nhanh 
 function clampMerit(rsid, incoming) {
   const m = Math.max(0, incoming | 0);
   let cap = _meritCaps.get(rsid);
-  if (!cap) { cap = { m: 0, t: Date.now() }; _meritCaps.set(rsid, cap); }
-  const allow = cap.m + 200 * ((Date.now() - cap.t) / 60000); // tối đa ~200 CĐ/phút
+  if (!cap) {
+    // lần đầu thấy: chấp nhận tối đa 500 CĐ đã tích (ngưỡng hợp lệ một phiên), spam vài triệu bị bóp về 500
+    cap = { m: Math.min(m, 500), t: Date.now() };
+    _meritCaps.set(rsid, cap);
+    return cap.m;
+  }
+  const allow = cap.m + 200 * ((Date.now() - cap.t) / 60000); // sau đó tối đa ~200 CĐ/phút
   const out = Math.min(m, Math.floor(allow));
   if (out > cap.m) cap.m = out;
   return out;
