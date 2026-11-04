@@ -537,9 +537,10 @@ const FirebaseNet = function () {
     const seats = new Array(TOTAL_SEATS).fill(null);
     const queue = [];
     const people = [];
-    for (const p of peers.values()) {
-      people.push({ sid: p.sid, name: p.name || '', merit: p.merit || 0, seat: p.seat, enqTs: p.enqTs });
-      if (p.enqTs && !(Number.isInteger(p.seat) && p.seat >= 0)) queue.push({ sid: p.sid, name: p.name, enqTs: p.enqTs });
+    for (const [k, p] of peers) {
+      if (k === sid) continue; // record của mình đã được đếm riêng bên dưới — tránh đếm đôi
+      people.push({ sid: k, name: p.name || '', merit: p.merit || 0, seat: p.seat, enqTs: p.enqTs });
+      if (p.enqTs && !(Number.isInteger(p.seat) && p.seat >= 0)) queue.push({ sid: k, name: p.name, enqTs: p.enqTs });
     }
     people.push({ sid, name: me.name || '', merit: me.merit, seat: me.seat, enqTs: me.enqTs });
     if (me.enqTs && me.seat < 0) queue.push({ sid, name: me.name, enqTs: me.enqTs });
@@ -674,10 +675,11 @@ const FirebaseNet = function () {
         maybePromoteMyself();
         markDirty();
       });
-      // feed nhật ký: người khác vào chiếu / ra về
+      // feed nhật ký: người khác vào chiếu / ra về (bỏ qua chiếu đã có người từ trước lúc mở trang)
       seatsRef.on('child_added', (snap) => {
         const v = snap.val();
         if (!v || !v.sid || v.sid === sid) return;
+        if (v.ts && v.ts < startTs - 30000) return;
         recentRits.unshift({ type: 'seatTaken', user: v.name || 'Thí Chủ', uniqueId: v.sid, seatIdx: +snap.key, ts: now(), remote: true });
         if (recentRits.length > 30) recentRits.length = 30;
       });
