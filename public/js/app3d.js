@@ -713,6 +713,8 @@ import { makeDevotee } from './chars3d.js';
       .to(hip.rotation, { x: 0, duration: 0.4 });
   }
 
+  const ritualActors = new Set(); // mỗi người chỉ hành lễ 1 lần — tránh nhân đôi nhân vật
+
   function walkAndBow(user, actionLabel, wish, seatIdx) {
     const hudName = document.getElementById('devoteeNameLine');
     const hudAct = document.getElementById('devoteeActionTag');
@@ -720,6 +722,10 @@ import { makeDevotee } from './chars3d.js';
     if (hudAct) hudAct.textContent = actionLabel || 'Dâng hương';
     incenseGlow.intensity = 2.6;
     if (window.gsap) gsap.to(incenseGlow, { intensity: 1.4, duration: 3 });
+
+    const key = String(user || '').toLowerCase();
+    if (ritualActors.has(key)) return; // người này đang hành lễ rồi
+    ritualActors.add(key);
 
     const G = window.gsap;
     const sc = (seatIdx >= 0 && seatIdx < TOTAL_SEATS) ? seatChars[seatIdx] : null;
@@ -753,12 +759,13 @@ import { makeDevotee } from './chars3d.js';
           ];
           travelPath(t, retWps, () => {
             releaseTraveler(t);
+            ritualActors.delete(key);
             if (sc.devotee) sc.devotee.group.visible = true;
             if (sc.labelEl) sc.labelEl.style.display = '';
             sc.status = 'seated';
           });
         } else {
-          travelPath(t, [{ x: 0, z: 6.4 }], () => releaseTraveler(t));
+          travelPath(t, [{ x: 0, z: 6.4 }], () => { releaseTraveler(t); ritualActors.delete(key); });
         }
       };
       if (G) bowSequence(t.char.hip, G, finish);
@@ -825,6 +832,10 @@ import { makeDevotee } from './chars3d.js';
           animateSeatArrival(i, occ);
         } else if (!occ && (sc.status === 'seated' || sc.status === 'walking_in')) {
           animateSeatDeparture(i);
+        } else if (occ && sc.status === 'seated' && sc.occupant && sc.occupant.name !== occ.name) {
+          // ghế đã đổi chủ trong lúc hành lễ — cập nhật nhãn
+          sc.occupant = occ;
+          if (sc.labelEl) sc.labelEl.textContent = occ.name;
         }
       }
     }
