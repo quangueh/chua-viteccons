@@ -14,6 +14,11 @@
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Noto+Serif:wght@700;900&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="/css/live.css" />
+  <script>
+    // Cổng pháp danh: chưa ghi danh → chặn vào chùa (chạy đồng bộ, không flash cho người đã ghi danh)
+    try { if (!sessionStorage.getItem('chua_vt_name')) document.documentElement.classList.add('need-name'); }
+    catch (e) { document.documentElement.classList.add('need-name'); }
+  </script>
 </head>
 
 <body>
@@ -231,15 +236,30 @@
     </div>
   </div>
 
+  <!-- ====================================================================
+       CỔNG PHÁP DANH — bắt buộc ghi danh trước khi vào chùa
+       (chỉ hiện khi html.need-name — xem inline script trong <head>)
+       ==================================================================== -->
+  <div class="name-gate-overlay" id="nameGate">
+    <div class="name-gate-panel">
+      <img src="/assets/viteccons_logo.png" alt="Viteccons" class="gate-logo" />
+      <div class="gate-title">NAM MÔ A DI ĐÀ PHẬT</div>
+      <div class="gate-sub">Đệ tử vào chùa xin để lại pháp danh<br />để chư tăng và đạo tràng tiện xưng hô</div>
+      <input type="text" id="gateNameInput" class="dock-input gate-input" maxlength="40"
+        placeholder="Pháp danh của bạn (VD: Thích An Nhiên)..." autocomplete="off" />
+      <button class="dock-btn gold gate-btn" id="btnGateEnter">🪷 Ghi Danh & Vào Chùa</button>
+    </div>
+  </div>
+
   <script src="/vendor/gsap.min.js"></script>
   <script src="/js/vendor/firebase-app-compat.js"></script>
   <script src="/js/vendor/firebase-database-compat.js"></script>
-  <script src="/js/firebase-config.js?v=7"></script>
+  <script src="/js/firebase-config.js?v=8"></script>
   <script src="/js/vendor/mqtt.min.js"></script>
-  <script src="/js/presence.js?v=7"></script>
-  <script src="/js/standalone.js?v=7"></script>
-  <script src="/js/audio.js?v=7"></script>
-  <script type="module" src="/js/app3d.js?v=7"></script>
+  <script src="/js/presence.js?v=8"></script>
+  <script src="/js/standalone.js?v=8"></script>
+  <script src="/js/audio.js?v=8"></script>
+  <script type="module" src="/js/app3d.js?v=8"></script>
 </body>
 
 </html>

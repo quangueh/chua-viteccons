@@ -1235,6 +1235,20 @@ import { makeDevotee } from './chars3d.js';
     }
   }
 
+  async function registerFlow(user) {
+    try { sessionStorage.setItem('chua_vt_name', user); } catch (_) { }
+    const res = await callRpc('temple.register', { user });
+    refreshSeatStatus(res?.state);
+    if (res?.seatIdx !== undefined) {
+      toast(`🪷 ${user} ngồi chiếu số ${res.seatIdx + 1} — Nam mô A Di Đà Phật`);
+    } else if (res?.queued) {
+      toast(`Đạo tràng đã kín 48/48 — ${user} đang xếp hàng vị trí #${res.position}`);
+    } else {
+      const modal = document.getElementById('seatModal');
+      if (modal) { renderSeatPicker(); modal.classList.add('visible'); }
+    }
+  }
+
   async function doRegister() {
     const nameEl = document.getElementById('inputDevoteeName');
     const user = nameEl?.value.trim() || '';
@@ -1243,17 +1257,7 @@ import { makeDevotee } from './chars3d.js';
       nameEl?.focus();
       return;
     }
-    try { sessionStorage.setItem('chua_vt_name', user); } catch (_) { }
-    const res = await callRpc('temple.register', { user });
-    refreshSeatStatus(res?.state);
-    if (res?.seatIdx !== undefined) {
-      toast(`Bạn đang ngồi chiếu số ${res.seatIdx + 1}`);
-    } else if (res?.queued) {
-      toast(`Đạo tràng đã kín 48/48 — ${user} đang xếp hàng vị trí #${res.position}`);
-    } else {
-      const modal = document.getElementById('seatModal');
-      if (modal) { renderSeatPicker(); modal.classList.add('visible'); }
-    }
+    await registerFlow(user);
   }
 
   let toastTimer = null;
@@ -1398,6 +1402,20 @@ import { makeDevotee } from './chars3d.js';
   });
   // mặc định thu gọn cho gọn màn — có tin mới sẽ hiện badge
   chatPanel?.classList.add('collapsed');
+
+  // ── Cổng pháp danh: chưa ghi danh → bắt buộc nhập tên trước khi vào chùa ──
+  const gateInput = document.getElementById('gateNameInput');
+  const enterTemple = () => {
+    const user = (gateInput?.value || '').trim();
+    if (!user) { gateInput?.focus(); return; }
+    document.documentElement.classList.remove('need-name');
+    const nameEl = document.getElementById('inputDevoteeName');
+    if (nameEl) nameEl.value = user;
+    registerFlow(user);
+  };
+  bind('btnGateEnter', enterTemple);
+  gateInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') enterTemple(); });
+  if (document.documentElement.classList.contains('need-name')) setTimeout(() => gateInput?.focus(), 350);
 
   const sMus = document.getElementById('sliderMusicVol');
   if (sMus) {
