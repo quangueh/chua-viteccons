@@ -754,8 +754,8 @@ const FirebaseNet = function () {
         if (ev.ts >= startTs - 30000 && typeof onRitualCb === 'function') onRitualCb(ev);
         markDirty();
       });
-      // chat realtime: 50 tin gần nhất + tin mới
-      chatRef.limitToLast(50).on('child_added', (snap) => {
+      // chat realtime: toàn bộ lịch sử (child_added trả hết theo thứ tự key = thời gian) + tin mới
+      chatRef.on('child_added', (snap) => {
         const m = snap.val();
         if (!m || m.app !== 'cv1' || !m.sid) return;
         // không lọc echo của mình ở đây (FB bắn sync ngay trong push → không lọc key được);

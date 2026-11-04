@@ -1355,7 +1355,7 @@ import { makeDevotee } from './chars3d.js';
     const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
     row.innerHTML = `<span class="chat-name" style="color:${chatNameColor(m.uniqueId)}">${escapeHtml(m.user || 'Thí Chủ')}</span><span>${escapeHtml(m.text || '')}</span><span class="chat-time">${hh}</span>`;
     chatMsgs.appendChild(row);
-    while (chatMsgs.children.length > 60) chatMsgs.firstChild.remove();
+    while (chatMsgs.children.length > 1000) chatMsgs.firstChild.remove(); // trần DOM — lịch sử đầy đủ nằm trong DB
     if (mine || (m.ts && m.ts < chatLoadTs - 5000)) {
       chatMsgs.scrollTop = chatMsgs.scrollHeight; // tin của mình hoặc tin lịch sử — cuộn xuống, không badge
     } else if (wasNear && !chatPanel?.classList.contains('collapsed')) {
