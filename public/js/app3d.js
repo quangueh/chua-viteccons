@@ -1412,6 +1412,11 @@ import { makeDevotee } from './chars3d.js';
   // mặc định thu gọn cho gọn màn — có tin mới sẽ hiện badge
   chatPanel?.classList.add('collapsed');
 
+  // nút 🏆 trên điện thoại: bật/tắt bảng công đức dạng overlay nổi
+  bind('btnLbToggle', () => {
+    document.getElementById('hudLeaderboard')?.classList.toggle('lb-open');
+  });
+
   // ── CẦU DUYÊN — trao duyên → chat riêng (F5 mất sạch phía client) ──
   const tabPublic = document.getElementById('tabChatPublic');
   const tabDmBtn = document.getElementById('tabChatDm');
