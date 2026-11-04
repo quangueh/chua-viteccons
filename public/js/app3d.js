@@ -1311,6 +1311,14 @@ import { makeDevotee } from './chars3d.js';
     e.currentTarget.classList.toggle('active-toggle', audio.bgMusicEnabled);
   });
 
+  const syncTrackBtns = () => {
+    document.getElementById('btnTrackDaibi')?.classList.toggle('active-toggle', audio.bgTrackId === 'daibi');
+    document.getElementById('btnTrackZen')?.classList.toggle('active-toggle', audio.bgTrackId === 'zen');
+  };
+  bind('btnTrackDaibi', () => { audio.ensureContext(); audio.setTrack('daibi'); syncTrackBtns(); });
+  bind('btnTrackZen', () => { audio.ensureContext(); audio.setTrack('zen'); syncTrackBtns(); });
+  syncTrackBtns();
+
   const sMus = document.getElementById('sliderMusicVol');
   if (sMus) {
     sMus.addEventListener('input', (e) => {

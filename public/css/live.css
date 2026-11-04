@@ -671,6 +671,17 @@ body {
   gap: 8px;
 }
 
+.dock-btn.track-btn {
+  padding: 7px 8px;
+  font-size: 0.78rem;
+}
+
+.dock-btn.track-btn.active-toggle {
+  background: rgba(255, 199, 0, 0.16);
+  border-color: rgba(255, 199, 0, 0.55);
+  color: #ffe9a8;
+}
+
 .volume-control-row {
   display: flex;
   flex-direction: column;

@@ -22,7 +22,14 @@ class TempleAudioEngine {
 
     this.useSynthMusicFallback = false;
     this.synthBgTimer = null;
-    this.bgAudio = new Audio('/assets/bg_chant.wav');
+    // Hai bản nhạc nền — mặc định Chú Đại Bi (thầy Thích Hạnh Trí tụng)
+    this.bgTracks = {
+      daibi: '/assets/chu_dai_bi.m4a',
+      zen: '/assets/bg_chant.wav'
+    };
+    const savedTrack = localStorage.getItem('temple_music_track');
+    this.bgTrackId = this.bgTracks[savedTrack] ? savedTrack : 'daibi';
+    this.bgAudio = new Audio(this.bgTracks[this.bgTrackId]);
     this.bgAudio.loop = true;
     this.bgAudio.preload = 'auto';
     this.bgAudio.volume = this.bgBaseVolume;
@@ -79,6 +86,24 @@ class TempleAudioEngine {
     if (this.currentAudio) {
       this.currentAudio.volume = this.ttsVolume;
     }
+  }
+
+  setTrack(id) {
+    if (!this.bgTracks[id]) return this.bgTrackId;
+    if (id === this.bgTrackId) return id;
+    this.bgTrackId = id;
+    try {
+      localStorage.setItem('temple_music_track', id);
+    } catch (_) { }
+    try { this.bgAudio.pause(); } catch (_) { }
+    this.useSynthMusicFallback = false;
+    this.bgAudio = new Audio(this.bgTracks[id]);
+    this.bgAudio.loop = true;
+    this.bgAudio.preload = 'auto';
+    this.bgAudio.volume = this.ttsPlaying ? this.getDuckedVolume() : this.bgBaseVolume;
+    this.bgAudio.onerror = () => { this.useSynthMusicFallback = true; };
+    if (this.unlocked && this.bgMusicEnabled) this.startZenAmbience();
+    return id;
   }
 
   startZenAmbience() {
