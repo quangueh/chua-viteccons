@@ -400,7 +400,26 @@ window.TempleLocal = (function () {
     n.sendRitual(event);
   }
 
+  // Chặn spam lễ: mỗi nghi thức có nhịp riêng — spam click chồng animation +
+  // bắn storm event Firebase lên mọi client → lag. Quá nhanh thì trả cooldown.
+  const RITUAL_COOLDOWN_MS = {
+    'temple.burnIncense': 5000,
+    'temple.strikeWoodenFish': 1500,
+    'temple.sendPrayer': 4000,
+    'temple.ringBell': 4000,
+    'temple.drawFortune': 5000,
+    'temple.offerGift': 8000,
+    'temple.grandCeremony': 30000
+  };
+  const lastRitualAt = {};
+
   function handleRpc(method, params = {}) {
+    const cd = RITUAL_COOLDOWN_MS[method];
+    if (cd) {
+      const last = lastRitualAt[method] || 0;
+      if (Date.now() - last < cd) return { state: getPublicState(), error: 'cooldown' };
+      lastRitualAt[method] = Date.now();
+    }
     switch (method) {
       case 'temple.getState': return { state: getPublicState() };
       case 'temple.burnIncense': return Rituals.burnIncense(params);

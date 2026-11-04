@@ -1150,6 +1150,7 @@ import { makeDevotee } from './chars3d.js';
   async function callRpc(method, params = {}) {
     audio.ensureContext();
     const res = window.TempleLocal?.handleRpc(method, params);
+    if (res?.error === 'cooldown') toast('Từ từ thôi đạo hữu 🙏 thành tâm không cần vội');
     if (res?.state) updateUIState(res.state);
     if (res?.event) triggerRitualVisuals(res.event);
     refreshSeatStatus();
