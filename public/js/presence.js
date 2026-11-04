@@ -1,16 +1,20 @@
 /**
  * TempleNet — Lớp realtime chùa dùng chung (không server riêng).
- * Mọi trình duyệt nói chuyện qua một kênh pub/sub công cộng (ntfy.sh):
+ * Mọi trình duyệt nói chuyện qua HAI kênh công cộng song song: ntfy.sh
+ * (SSE → WS → polling dự phòng) và MQTT public broker (EMQ X qua WSS).
+ * Máy chỉ tới được một trong hai kênh vẫn tham gia bình thường:
  * heartbeat 5s mang theo tên + chiếu + công đức; claim chiếu/hàng chờ theo
  * luật "claim sớm nhất thắng, đầu hàng được vào trước" — mọi client áp cùng
- * luật nên hội tụ về cùng một sơ đồ 48 chiếu. Ngừng heartbeat 15s = mất ghế.
+ * luật nên hội tụ về cùng một sơ đồ 48 chiếu. Thoát web gửi 'bye' tức thì
+ * (sendBeacon) → nhả ghế ngay; chỉ khi treo/mất mạng mới chờ stale 90s —
+ * đủ rộng để tab chạy nền bị Chrome throttle timer vẫn không bị "bay màu".
  * Mất kết nối → chạy một mình như cũ.
  */
 window.TempleNet = (function () {
   const TOPIC = 'cvtc-hall-8f3k2qz';
   const BASE = 'https://ntfy.sh';
   const HEARTBEAT_MS = 8000;
-  const STALE_MS = 24000;
+  const STALE_MS = 90000; // tab ẩn bị throttle ~60s vẫn còn sống; thoát thật báo 'bye' ngay
   const TOTAL_SEATS = 48;
 
   // sid tồn tại theo tab — reload giữ, đóng tab mất (khớp "thoát web mất ghế")
@@ -70,17 +74,55 @@ window.TempleNet = (function () {
     if (typeof onChangeCb === 'function') onChangeCb();
   }
 
-  // ── publish / subscribe ─────────────────────────────────────────────────
+  // ── publish / subscribe: phát trên MỌI kênh đang sống (ntfy + MQTT) ─────
+  let mqttClient = null;
+  let midCounter = 0;
+  const seenMids = new Set(); // dedupe: cùng 1 tin đi 2 kênh → chỉ xử lý 1 lần
+
   function pub(obj) {
     try {
       obj.app = 'cv1';
       obj.sid = sid;
-      fetch(`${BASE}/${TOPIC}`, {
+      obj.mid = sid + ':' + (midCounter++) + ':' + now();
+      const body = JSON.stringify(obj);
+      // kênh 1: ntfy.sh
+      const sendNtfy = () => fetch(`${BASE}/${TOPIC}`, {
         method: 'POST',
-        body: JSON.stringify(obj),
+        body,
         keepalive: true
-      }).catch(() => { });
+      });
+      sendNtfy().catch(() => { setTimeout(() => sendNtfy().catch(() => { }), 2500); });
+      // kênh 2: MQTT public broker (EMQ X) — sống độc lập, cứu khi ntfy bị chặn
+      try {
+        if (mqttClient && mqttClient.connected) mqttClient.publish(TOPIC, body, { qos: 0 });
+      } catch (_) { }
     } catch (_) { }
+  }
+
+  function connectMqtt() {
+    if (!window.mqtt || !window.mqtt.connect) { setTimeout(connectMqtt, 3000); return; }
+    try {
+      mqttClient = window.mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+        clientId: 'cvtc_' + sid,
+        keepalive: 20,
+        reconnectPeriod: 5000,
+        connectTimeout: 12000,
+        clean: true,
+        // broker tự báo 'bye' cho mọi người nếu mình rớt mạng/tắt máy đột ngột
+        will: { topic: TOPIC, payload: JSON.stringify({ app: 'cv1', t: 'bye', sid }), qos: 0 }
+      });
+    } catch (_) { setTimeout(connectMqtt, 8000); return; }
+    mqttClient.on('connect', () => {
+      try {
+        mqttClient.subscribe(TOPIC, { qos: 0 });
+        heartbeat();
+      } catch (_) { }
+    });
+    mqttClient.on('message', (topic, payload) => {
+      try { handleMessage(payload.toString()); } catch (_) { }
+    });
+    mqttClient.on('error', () => { });
+    mqttClient.on('close', () => { });
   }
 
   // feed nhật ký: ai vào chiếu / ra về / xếp hàng — đồng bộ qua kênh chung
@@ -105,6 +147,11 @@ window.TempleNet = (function () {
     let m;
     try { m = JSON.parse(raw); } catch (_) { return; }
     if (!m || m.app !== 'cv1' || !m.sid || m.sid === sid) return;
+    if (m.mid) {
+      if (seenMids.has(m.mid)) return;
+      seenMids.add(m.mid);
+      if (seenMids.size > 1200) seenMids.clear();
+    }
     const t = now();
     let p = peers.get(m.sid);
     if (!p) {
@@ -184,25 +231,96 @@ window.TempleNet = (function () {
         markDirty();
         break;
       }
+      case 'bye': {
+        // người đó thoát web thật → xóa ngay khỏi sơ đồ, nhả chiếu tức thì
+        noteSeatChange(p, -1, t);
+        peers.delete(m.sid);
+        markDirty();
+        break;
+      }
     }
   }
 
-  function connectWs() {
+  // ── kênh nhận: SSE trước (qua proxy tốt hơn WS) → WS → polling dự phòng ──
+  let es = null;
+  let pollTimer = null;
+  let connecting = false;
+
+  function dispatchOuter(data) {
     try {
-      ws = new WebSocket(`wss://ntfy.sh/${TOPIC}/ws`);
-    } catch (_) { scheduleReconnect(); return; }
-    ws.onmessage = (e) => {
-      try {
-        const outer = JSON.parse(e.data);
-        if (outer.event === 'message') handleMessage(outer.message);
-      } catch (_) { }
+      const outer = JSON.parse(data);
+      if (outer.event === 'message') handleMessage(outer.message);
+    } catch (_) { }
+  }
+
+  function stopPoll() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+  function pollOnce() {
+    fetch(`${BASE}/${TOPIC}/json?poll=1&since=120s`)
+      .then((r) => r.text())
+      .then((txt) => {
+        txt.split('\n').forEach((line) => { if (line.trim()) dispatchOuter(line); });
+        markDirty();
+      })
+      .catch(() => { });
+  }
+  function startPoll() {
+    if (pollTimer) return;
+    pollOnce();
+    pollTimer = setInterval(pollOnce, 6000);
+  }
+
+  function connect() {
+    if (connecting) return;
+    connecting = true;
+    connectSSE();
+  }
+
+  function connectSSE() {
+    try { es = new EventSource(`${BASE}/${TOPIC}/sse`); }
+    catch (_) { connecting = false; connectWs(); return; }
+    const openTimer = setTimeout(() => {
+      if (!es || es.readyState !== EventSource.OPEN) {
+        try { es && es.close(); } catch (_) { }
+        es = null; connecting = false; connectWs();
+      }
+    }, 9000);
+    es.onopen = () => {
+      clearTimeout(openTimer); connecting = false;
+      stopPoll(); retryMs = 3000; heartbeat();
     };
-    ws.onopen = () => { retryMs = 3000; heartbeat(); };
-    ws.onclose = () => scheduleReconnect();
+    es.onmessage = (e) => dispatchOuter(e.data);
+    es.onerror = () => {
+      // EventSource tự reconnect khi readyState=CONNECTING; CLOSED = chết hẳn → WS
+      if (!es || es.readyState === EventSource.CLOSED) {
+        clearTimeout(openTimer);
+        try { es && es.close(); } catch (_) { }
+        es = null; connecting = false; connectWs();
+      }
+    };
+  }
+
+  function connectWs() {
+    try { ws = new WebSocket(`wss://ntfy.sh/${TOPIC}/ws`); }
+    catch (_) { startPoll(); scheduleReconnect(); return; }
+    const openTimer = setTimeout(() => {
+      if (ws && ws.readyState !== WebSocket.OPEN) { try { ws.close(); } catch (_) { } }
+    }, 9000);
+    ws.onmessage = (e) => dispatchOuter(e.data);
+    ws.onopen = () => {
+      clearTimeout(openTimer);
+      stopPoll(); retryMs = 3000; heartbeat();
+    };
+    ws.onclose = () => {
+      clearTimeout(openTimer);
+      startPoll();           // không nhận trực tiếp được thì vẫn polling để thấy người khác
+      scheduleReconnect();   // nền vẫn thử SSE lại để thoát chế độ polling
+    };
     ws.onerror = () => { try { ws.close(); } catch (_) { } };
   }
   function scheduleReconnect() {
-    setTimeout(connectWs, retryMs);
+    setTimeout(connect, retryMs);
     retryMs = Math.min(30000, retryMs * 2);
   }
 
@@ -336,12 +454,25 @@ window.TempleNet = (function () {
         markDirty();
       })
       .catch(() => { });
-    connectWs();
+    connect();
+    connectMqtt();
     hbTimer = setInterval(() => { heartbeat(); maybePromoteMyself(); }, HEARTBEAT_MS);
     pruneTimer = setInterval(prune, 3000);
-    const leaveNow = () => leave();
-    window.addEventListener('pagehide', leaveNow);
-    window.addEventListener('beforeunload', leaveNow);
+    // Thoát/đóng/reload → báo 'bye' ngay bằng sendBeacon (sống sót qua unload),
+    // kèm vacate/deq để ghế trả về tức thì thay vì chờ timeout
+    const sayBye = () => {
+      try {
+        const payload = JSON.stringify({ app: 'cv1', t: 'bye', sid });
+        if (!navigator.sendBeacon(`${BASE}/${TOPIC}`, payload)) pub({ t: 'bye' });
+      } catch (_) { try { pub({ t: 'bye' }); } catch (_) { } }
+      leave();
+    };
+    window.addEventListener('pagehide', sayBye);
+    // Tab bật lại sau khi ẩn (hoặc restore từ bfcache) → heartbeat ngay để không bị prune
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) { heartbeat(); maybePromoteMyself(); }
+    });
+    window.addEventListener('pageshow', (e) => { if (e.persisted) heartbeat(); });
   }
 
   return {
