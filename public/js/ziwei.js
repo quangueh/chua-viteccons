@@ -248,6 +248,32 @@
         sections.push({ h: s.name + (s.brightness ? ' (' + s.brightness + ')' : '') + (s.sihua ? ' — ' + s.sihua : ''), body: body });
       });
 
+      // 4c) Ngũ hành tương quan — hành cung vs hành sao (sinh/khắc)
+      var BR_EL = { 2: 'Mộc', 3: 'Mộc', 5: 'Hỏa', 6: 'Hỏa', 8: 'Kim', 9: 'Kim', 0: 'Thủy', 11: 'Thủy', 1: 'Thổ', 4: 'Thổ', 7: 'Thổ', 10: 'Thổ' };
+      var STAR_EL = { 'Tử Vi': 'Thổ', 'Thiên Cơ': 'Mộc', 'Thái Dương': 'Hỏa', 'Vũ Khúc': 'Kim', 'Thiên Đồng': 'Thủy', 'Liêm Trinh': 'Hỏa', 'Thiên Phủ': 'Thổ', 'Thái Âm': 'Thủy', 'Tham Lang': 'Mộc', 'Cự Môn': 'Thủy', 'Thiên Tướng': 'Thủy', 'Thiên Lương': 'Thổ', 'Thất Sát': 'Kim', 'Phá Quân': 'Thủy' };
+      var SHENG = { 'Mộc': 'Hỏa', 'Hỏa': 'Thổ', 'Thổ': 'Kim', 'Kim': 'Thủy', 'Thủy': 'Mộc' };
+      var KHAC = { 'Mộc': 'Thổ', 'Thổ': 'Thủy', 'Thủy': 'Hỏa', 'Hỏa': 'Kim', 'Kim': 'Mộc' };
+      if (p.branchIdx != null && majors.length) {
+        var cungEl = BR_EL[p.branchIdx];
+        var elLines = ['Cung ' + p.name + ' thuộc hành ' + cungEl + '. Tương quan với chính tinh:'];
+        var goodCount = 0, badCount = 0;
+        majors.forEach(function (s) {
+          var se = STAR_EL[s.name];
+          var rel;
+          if (!se || !cungEl) rel = 'trung tính';
+          else if (se === cungEl) { rel = 'đồng hành — bình ổn'; goodCount++; }
+          else if (SHENG[cungEl] === se) { rel = 'cung sinh sao — sao được nuôi, phát huy tốt'; goodCount++; }
+          else if (SHENG[se] === cungEl) { rel = 'sao sinh cung — cung được sao phù trợ'; goodCount++; }
+          else if (KHAC[cungEl] === se) { rel = 'cung khắc sao — sao bị áp chế, cần lưu ý'; badCount++; }
+          else { rel = 'sao khắc cung — cung bị hao tổn, cần chế hóa'; badCount++; }
+          elLines.push('• ' + s.name + ' (' + se + '): ' + rel);
+        });
+        elLines.push(badCount === 0 ? 'Tổng thể: ngũ hành tương sinh tương hòa — cung này thuận lợi, sao phát huy tốt.' :
+          goodCount > badCount ? 'Tổng thể: được tương sinh nhiều hơn tương khắc — cung này vẫn có nền tảng tốt, chỉ cần lưu ý các sao bị khắc chế.' :
+            'Tổng thể: tương khắc chiếm ưu thế — cung này cần chế hóa, tránh quyết định lớn và giữ sức khỏe tinh thần.');
+        sections.push({ h: 'Ngũ hành tương quan', body: elLines.join('\n') });
+      }
+
       // 4b) Cách cục nhận diện — matching tổ hợp sao kinh điển
       var ZP = window.ZiweiPatterns;
       if (ZP && ZP.matchPalace) {
