@@ -227,6 +227,93 @@ import { makeDevotee } from './chars3d.js';
   }
 
   // ============================================================
+  // KIẾN TRÚC 3D THẬT — cột gỗ + xà ngang + tường bên tạo chiều sâu
+  // khi camera xoay (ảnh nền chỉ là "chánh điện xa", đây là hiên chùa gần)
+  // ============================================================
+  const woodDark = new THREE.MeshStandardMaterial({ color: 0x4a2412, roughness: 0.8 });
+  const woodRed = new THREE.MeshStandardMaterial({ color: 0x6e2a18, roughness: 0.75 });
+  const goldTrim = new THREE.MeshStandardMaterial({ color: 0xd8a03c, roughness: 0.4, metalness: 0.55 });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x2a1208, roughness: 0.92 });
+
+  // cột hai bên — hàng dọc theo lối đi, đế + đầu cột viền vàng
+  for (const sx of [-1, 1]) {
+    for (const z of [-1.5, -5.5, -9.5, -13.5, -17.5]) {
+      const col = new THREE.Group();
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.42, 7.4, 14), woodRed);
+      shaft.position.y = 3.7;
+      shaft.castShadow = true;
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.58, 0.4, 14), woodDark);
+      base.position.y = 0.2;
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.36, 0.32, 14), goldTrim);
+      cap.position.y = 7.35;
+      col.add(shaft, base, cap);
+      col.position.set(sx * 8.6, 0, z);
+      scene.add(col);
+    }
+    // tường bên lửng — panel tối giữa các cột, viền gỗ
+    for (const z of [-3.5, -7.5, -11.5, -15.5]) {
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(0.35, 5.6, 3.6), wallMat);
+      panel.position.set(sx * 9.6, 3.0, z);
+      scene.add(panel);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.22, 3.8), woodDark);
+      rail.position.set(sx * 9.6, 6.05, z);
+      scene.add(rail);
+    }
+  }
+  // xà ngang trên đỉnh cột — chạy dọc chiều sâu
+  for (const sx of [-1, 1]) {
+    for (const z of [-1.5, -5.5, -9.5, -13.5, -17.5]) {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.42, 3.6), woodDark);
+      beam.position.set(sx * 8.6, 7.55, z);
+      scene.add(beam);
+    }
+  }
+  // xà dọc hai bên + mái hiên phía trước (phía camera)
+  for (const sx of [-1, 1]) {
+    const longBeam = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.5, 18), woodDark);
+    longBeam.position.set(sx * 8.6, 7.9, -9.5);
+    scene.add(longBeam);
+    // mái hiên che nắng — tấm dốc phía trước
+    const awning = new THREE.Mesh(
+      new THREE.BoxGeometry(19, 0.18, 4.4),
+      new THREE.MeshStandardMaterial({ color: 0x3d1c0e, roughness: 0.9, side: THREE.DoubleSide })
+    );
+    awning.position.set(0, 7.2, 1.2);
+    awning.rotation.x = 0.28;
+    scene.add(awning);
+    // đuôi mái trang trí cong nhẹ 2 đầu
+    for (const ex of [-1, 1]) {
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.4, 4), goldTrim);
+      tip.position.set(ex * 9.4, 6.7, 3.2);
+      tip.rotation.x = Math.PI / 2 + 0.4;
+      scene.add(tip);
+    }
+  }
+  // đèn lồng giấy treo dưới xà — ấm, lung lay trong animate()
+  const paperLanterns = [];
+  const lanternPaper = new THREE.MeshStandardMaterial({
+    color: 0xffc070, emissive: 0xff8a30, emissiveIntensity: 0.9,
+    transparent: true, opacity: 0.92, roughness: 0.7
+  });
+  for (const z of [-2.5, -6.5, -10.5, -14.5]) {
+    for (const sx of [-1, 1]) {
+      const lg = new THREE.Group();
+      const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.9, 4), woodDark);
+      cord.position.y = 0.45;
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.26, 0.62, 12), lanternPaper.clone());
+      const capT = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.16, 10), woodRed);
+      capT.position.y = 0.39;
+      const capB = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.14, 10), woodRed);
+      capB.position.y = -0.39;
+      capB.rotation.x = Math.PI;
+      lg.add(cord, body, capT, capB);
+      lg.position.set(sx * 6.4, 6.6, z);
+      scene.add(lg);
+      paperLanterns.push({ g: lg, phase: z * 1.3 + sx });
+    }
+  }
+
+  // ============================================================
   // LƯ HƯƠNG ĐỒNG + NHANH + KHÓI
   // ============================================================
   const burner = new THREE.Group();
@@ -1694,6 +1781,12 @@ import { makeDevotee } from './chars3d.js';
     incenseGlow.intensity = 1.35 + Math.sin(t * 7.3) * 0.18 + Math.sin(t * 13.1) * 0.1;
     candleL.intensity = 0.8 + Math.sin(t * 5.7) * 0.15;
     candleR.intensity = 0.8 + Math.cos(t * 6.3) * 0.15;
+
+    // đèn lồng giấy lung lay nhẹ
+    for (const pl of paperLanterns) {
+      pl.g.rotation.z = Math.sin(t * 0.9 + pl.phase) * 0.05;
+      pl.g.rotation.x = Math.cos(t * 0.7 + pl.phase * 1.3) * 0.04;
+    }
 
     updateLabels();
     updateCamera();
