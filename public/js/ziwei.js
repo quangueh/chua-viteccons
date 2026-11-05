@@ -203,9 +203,12 @@
       // 1) Header cung
       sections.push({ h: p.name + ' cung — ' + p.stem + ' ' + (typeof p.branch === 'string' ? p.branch : ''), body: '' });
 
-      // 2) Ý nghĩa cung nền
+      // 2) Ý nghĩa cung nền + luận sâu
       var palaceLong = (T.PALACE_LONG || {})[p.name] || (T.PALACE_LONG || {})[p.rawName] || '';
       if (palaceLong) sections.push({ h: 'Ý nghĩa cung ' + p.name, body: palaceLong });
+      var D = window.ZiweiDeep || {};
+      var palaceDeep = (D.PALACE_DEEP || {})[p.name] || '';
+      if (palaceDeep) sections.push({ h: 'Luận sâu cung ' + p.name, body: palaceDeep });
 
       // 3) Cung không?
       var majors = this.majorsOf(p);
@@ -232,8 +235,31 @@
         if (brightTxt) body += '\n\nĐộ sáng: ' + brightTxt + '.';
         if (sihuaTxt) body += '\n\n' + sihuaTxt + '.';
         if (combo) body += '\n\nCách cục: ' + combo;
+        // hành động theo sao
+        var starAct = ((D.STAR_ACTION || {})[s.name]) || null;
+        if (starAct) {
+          body += '\n\n══ HÀNH ĐỘNG THEO SAO ' + s.name + ' ══';
+          body += '\n• NÊN: ' + (starAct.should || []).join(' • ');
+          body += '\n• TRÁNH: ' + (starAct.avoid || []).join(' • ');
+          if (starAct.career) body += '\n• NGHỀ: ' + starAct.career;
+          if (starAct.health) body += '\n• SỨC KHỎE: ' + starAct.health;
+          if (starAct.finance) body += '\n• TÀI CHÍNH: ' + starAct.finance;
+        }
         sections.push({ h: s.name + (s.brightness ? ' (' + s.brightness + ')' : '') + (s.sihua ? ' — ' + s.sihua : ''), body: body });
       });
+
+      // 4b) Cách cục nhận diện — matching tổ hợp sao kinh điển
+      var ZP = window.ZiweiPatterns;
+      if (ZP && ZP.matchPalace) {
+        var pats = ZP.matchPalace(p, allPalaces, chartObj) || [];
+        if (pats.length) {
+          var LEVEL_VI = { excellent: 'Đại cách ★★★', good: 'Cách tốt ★★', neutral: 'Cách trung ★', caution: 'Cách cần đề phòng ⚠' };
+          var patBody = pats.map(function (pt) {
+            return '◆ ' + pt.name + ' [' + (LEVEL_VI[pt.level] || pt.level) + ']\n' + pt.desc;
+          }).join('\n\n');
+          sections.push({ h: 'Cách cục nhận diện (' + pats.length + ' cách)', body: patBody });
+        }
+      }
 
       // 5) Phụ tinh hội chiếu
       var minors = (p.stars || []).filter(function (s) { return majors.indexOf(s) < 0; });
@@ -265,7 +291,19 @@
         sections.push({ h: 'Đại hạn qua cung này', body: 'Tuổi ' + p.decadal[0] + '–' + p.decadal[1] + ': thời kỳ này cung ' + p.name + ' phát vận — chú ý các sao tọa thủ và sao lưu niên để biết cụ thể hơn.' });
       }
 
-      // 8) Lời khuyên
+      // 8) Hành động cụ thể theo cung — NÊN/TRÁNH/NGHỀ/SỨC KHỎE/TÀI CHÍNH
+      var palaceAct = (D.PALACE_ACTION || {})[p.name] || null;
+      if (palaceAct) {
+        var actBody = '';
+        actBody += 'NÊN LÀM:\n' + (palaceAct.should || []).map(function (x) { return '• ' + x; }).join('\n') + '\n\n';
+        actBody += 'TRÁNH:\n' + (palaceAct.avoid || []).map(function (x) { return '• ' + x; }).join('\n') + '\n\n';
+        if (palaceAct.career) actBody += 'NGHỀ PHÙ HỢP: ' + palaceAct.career + '\n\n';
+        if (palaceAct.health) actBody += 'SỨC KHỎE: ' + palaceAct.health + '\n\n';
+        if (palaceAct.timing) actBody += 'THỜI ĐIỂM: ' + palaceAct.timing;
+        sections.push({ h: 'Hành động cụ thể cung ' + p.name, body: actBody.trim() });
+      }
+
+      // 9) Lời khuyên
       var advice = (T.PALACE_ADVICE || {})[p.name] || '';
       if (advice) sections.push({ h: 'Lời khuyên', body: advice });
 
