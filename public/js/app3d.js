@@ -2198,27 +2198,57 @@ import { makeDevotee } from './chars3d.js';
     if (!F || !zenModal || !zenBody) return;
 
     const zenHour = document.getElementById('zenHour');
-    const zenGender = document.getElementById('zenGender');
+    const zenName = document.getElementById('zenName');
+    const zenViewYear = document.getElementById('zenViewYear');
+    const zenViewMonth = document.getElementById('zenViewMonth');
     const ZW = window.Ziwei;
 
-    /* birth: {d:'YYYY-MM-DD', h:0-23, g:'male'|'female'} — migrate từ key cũ */
+    // populate năm xem / tháng xem
+    if (zenViewYear && !zenViewYear.options.length) {
+      const ny = new Date().getFullYear();
+      let yo = '';
+      for (let y = ny - 12; y <= ny + 12; y++) yo += `<option value="${y}"${y === ny ? ' selected' : ''}>${y}</option>`;
+      zenViewYear.innerHTML = yo;
+      let mo = '';
+      for (let m = 1; m <= 12; m++) mo += `<option value="${m}"${m === new Date().getMonth() + 1 ? ' selected' : ''}>Tháng ${m}</option>`;
+      if (zenViewMonth) zenViewMonth.innerHTML = mo;
+    }
+    const getGenderVal = () => (document.querySelector('input[name=zenGenderR]:checked') || {}).value || 'male';
+    const getCalVal = () => (document.querySelector('input[name=zenCal]:checked') || {}).value || 'solar';
+
+    /* birth: {d:'YYYY-MM-DD', h:0-23, g:'male'|'female', cal:'solar'|'lunar'} — migrate từ key cũ */
     const getBirthObj = () => {
       try {
         const b = JSON.parse(localStorage.getItem('chua_vt_birth') || 'null');
         if (b && /^\d{4}-\d{2}-\d{2}$/.test(b.d || '')) return b;
       } catch (e) { /* ignore */ }
       const old = localStorage.getItem('chua_vt_birthday') || '';
-      return /^\d{4}-\d{2}-\d{2}$/.test(old) ? { d: old, h: 12, g: 'male' } : null;
+      return /^\d{4}-\d{2}-\d{2}$/.test(old) ? { d: old, h: 12, g: 'male', cal: 'solar' } : null;
     };
-    const getBirth = () => (zenBirth && zenBirth.value) || (getBirthObj() || {}).d || '';
+    // ngày dương chuẩn cho các hàm F (chấm điểm theo can chi dương)
+    const getBirth = () => {
+      const stored = getBirthObj();
+      if (stored && stored.cal === 'lunar' && zwChart && zwChart.solarDate) {
+        const sd = String(zwChart.solarDate).replace(/\//g, '-');
+        return /^\d{4}-\d{1,2}-\d{1,2}$/.test(sd) ? sd.split('-').map((x, i) => i ? String(parseInt(x, 10)).padStart(2, '0') : x).join('-') : stored.d;
+      }
+      return (zenBirth && zenBirth.value) || (stored || {}).d || '';
+    };
     const saveBirth = () => {
       const v = zenBirth?.value || '';
       if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
         localStorage.setItem('chua_vt_birth', JSON.stringify({
-          d: v, h: parseInt(zenHour?.value || '12', 10), g: zenGender?.value || 'male'
+          d: v, h: parseInt(zenHour?.value || '12', 10), g: getGenderVal(), cal: getCalVal()
         }));
+        if (zenName && zenName.value.trim()) {
+          try { localStorage.setItem('chua_vt_zen_name', zenName.value.trim()); } catch (_) { }
+        }
         zwChart = null; buildZw();
-        toast('🔮 Đã lập lá số tử vi — xem cung mệnh và hạn vận nào');
+        toast('🔮 Đã lập lá số tử vi' + (getCalVal() === 'lunar' ? ' (lịch âm)' : '') + ' — xem cung mệnh và hạn vận nào');
+      }
+      // năm/tháng xem → đưa lưu nhật về ngày giữa tháng đó
+      if (zenViewYear && zenViewMonth && zenViewYear.value && zenViewMonth.value) {
+        zwRefDate = zenViewYear.value + '-' + String(parseInt(zenViewMonth.value, 10)).padStart(2, '0') + '-15';
       }
       renderZen(zenTab);
     };
@@ -2229,7 +2259,7 @@ import { makeDevotee } from './chars3d.js';
       const b = getBirthObj();
       if (b && ZW && ZW.available()) {
         const [y, m, d] = b.d.split('-').map(Number);
-        try { zwChart = ZW.buildChart({ year: y, month: m, day: d, hour: b.h || 12, gender: b.g || 'male' }); } catch (e) { zwChart = null; }
+        try { zwChart = ZW.buildChart({ year: y, month: m, day: d, hour: b.h || 12, gender: b.g || 'male', lunar: b.cal === 'lunar' }); } catch (e) { zwChart = null; }
       } else zwChart = null;
       return zwChart;
     }
@@ -2338,16 +2368,37 @@ import { makeDevotee } from './chars3d.js';
         for (let col = 0; col < 4; col++) {
           const p = byPos[r + ',' + col];
           if (!p) {
-            // ô trung cung — hiển thị thông tin tóm tắt
+            // ô trung cung — thông tin lá số theo kiểu tuvi.vn
             if (r >= 1 && r <= 2 && col >= 1 && col <= 2) {
               const cellIdx = (r - 1) * 2 + (col - 1);
+              const bName = (localStorage.getItem('chua_vt_zen_name') || '').trim();
+              const b = c.birth || {};
+              const solarStr = c.solarDate || (b.year ? b.year + '-' + b.month + '-' + b.day : '');
+              const ls = (F && F.laSo && solarStr) ? F.laSo(solarStr) : null;
+              const HOUR_NAMES = ['Tý', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi', 'Thân', 'Dậu', 'Tuất', 'Hợi'];
+              const hIdx = Math.min(12, Math.max(0, Math.floor(((b.hour || 12) + 1) / 2))) % 12;
+              let hourPillar = '';
+              if (ls && F.STEMS && F.BRANCHES) {
+                const ds = ls.ngay.stem;
+                hourPillar = F.STEMS[(ds * 2 + hIdx) % 10] + ' ' + F.BRANCHES[hIdx];
+              }
+              const calLb = c.inputLunar ? 'Âm lịch' : 'Dương lịch';
               const sums = [
-                ming ? `Mệnh: ${ZW.majorsOf(ming).map((s) => s.name).join(', ') || 'không chính tinh'}` : '',
-                c.juInfo ? `${c.juInfo.name}: ${c.juInfo.kw}` : '',
-                shen && shen !== ming ? `Thân cư ${shen.name} cung` : 'Thân cư Mệnh',
-                'Bấm vào cung để xem luận giải'
+                `<div class="zc-h">Họ tên</div>${bName ? escapeHtml(bName) : '<i>chưa nhập</i>'}<br>` +
+                `<div class="zc-h">Giới tính</div>${b.gender === 'female' ? 'Nữ' : 'Nam'} · Tuổi ${escapeHtml(c.zodiac || '')}`,
+                `<div class="zc-h">Ngày sinh (${calLb})</div>${escapeHtml(String(b.day || '?'))}/${escapeHtml(String(b.month || '?'))}/${escapeHtml(String(b.year || '?'))}` +
+                (c.solarDate && c.inputLunar ? `<br><span class="zc-sm">(DL ${escapeHtml(c.solarDate)})</span>` : '') +
+                `<br><span class="zc-sm">${escapeHtml(c.lunarDate || '')}</span>` +
+                `<br><div class="zc-h">Giờ sinh</div>${b.hour != null ? b.hour + 'h — giờ ' + HOUR_NAMES[hIdx] : 'Ngọ'}`,
+                `<div class="zc-h">Mệnh cung</div>tại ${ming ? escapeHtml(ming.branch) + ' (' + escapeHtml(ming.name) + ')' : '?'}` +
+                `<br><div class="zc-h">Thân cung</div>${shen && shen !== ming ? 'cư ' + escapeHtml(shen.name) : 'cư Mệnh'}` +
+                `<br><div class="zc-h">Cục</div>${escapeHtml(c.juName || '')} — ${escapeHtml(c.juInfo ? c.juInfo.kw : '')}`,
+                `<div class="zc-h">Tứ trụ</div>` +
+                (ls ? `Năm ${escapeHtml(ls.nam.label)} · Tháng ${escapeHtml(ls.thang.label)}` +
+                  `<br>Ngày ${escapeHtml(ls.ngay.label)}${hourPillar ? ' · Giờ ' + escapeHtml(hourPillar) : ''}` : '—') +
+                `<br><span class="zc-sm">Bấm vào cung để xem luận giải</span>`
               ];
-              html += `<div class="zw-cell center"><div class="zw-center-txt">${escapeHtml(sums[cellIdx] || '')}</div></div>`;
+              html += `<div class="zw-cell center"><div class="zw-center-txt">${sums[cellIdx] || ''}</div></div>`;
             } else {
               html += `<div class="zw-cell empty"></div>`;
             }
@@ -2464,7 +2515,11 @@ import { makeDevotee } from './chars3d.js';
       const b = getBirthObj();
       if (zenBirth) zenBirth.value = b ? b.d : '';
       if (zenHour && b) zenHour.value = String(b.h != null ? b.h : 12);
-      if (zenGender && b) zenGender.value = b.g || 'male';
+      if (zenName) zenName.value = localStorage.getItem('chua_vt_zen_name') || '';
+      const gR = document.querySelector(`input[name=zenGenderR][value="${(b && b.g) || 'male'}"]`);
+      if (gR) gR.checked = true;
+      const cR = document.querySelector(`input[name=zenCal][value="${(b && b.cal) || 'solar'}"]`);
+      if (cR) cR.checked = true;
       buildZw();
       zenModal.classList.add('visible');
       renderZen(zenTab);

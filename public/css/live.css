@@ -2645,6 +2645,51 @@ html.need-name .name-gate-overlay {
   margin-top: 3px;
 }
 
+/* ===== Form lập lá số (kiểu tuvi.vn) ===== */
+.zb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.zb-lb {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted-gold);
+  min-width: 66px;
+}
+
+.zb-lb small {
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.zb-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--muted-gold);
+  cursor: pointer;
+}
+
+.zb-radio input {
+  accent-color: #d8a03c;
+}
+
+.zen-input {
+  flex: 1;
+  min-width: 140px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(216, 160, 60, 0.4);
+  border-radius: 8px;
+  color: var(--ivory);
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
 /* ===== Chế độ toàn màn hình tab Tử Vi ===== */
 .zen-card.zw-mode {
   width: min(1560px, 97vw);
@@ -2702,6 +2747,179 @@ html.need-name .name-gate-overlay {
     width: 96vw;
     max-height: 92vh;
   }
+}
+
+/* ===== Lá số phong cách giấy truyền thống (tab Tử Vi) ===== */
+.zen-card.zw-mode .zw-grid {
+  background: rgba(140, 95, 30, 0.35);
+  border: 1.5px solid #a87c3f;
+  border-radius: 6px;
+}
+
+.zen-card.zw-mode .zw-cell {
+  background: linear-gradient(165deg, #f7eed9, #eee1c4);
+  border: 1px solid #c9ab76;
+  border-radius: 3px;
+}
+
+.zen-card.zw-mode .zw-cell:hover {
+  background: linear-gradient(165deg, #fdf6e4, #f3e6c8);
+}
+
+.zen-card.zw-mode .zw-cell.center {
+  background: linear-gradient(165deg, #f2e4c5, #e9d7ae);
+  border: 1.5px solid #b08d4f;
+}
+
+.zen-card.zw-mode .zw-cell.empty {
+  background: rgba(120, 90, 45, 0.18);
+}
+
+.zen-card.zw-mode .zw-cell.is-ming {
+  box-shadow: inset 0 0 0 1.8px #a3231c, 0 0 8px rgba(163, 35, 28, 0.3);
+}
+
+.zen-card.zw-mode .zw-cell.is-shen {
+  box-shadow: inset 0 0 0 1.8px #2a5f9e;
+}
+
+.zen-card.zw-mode .zw-cname {
+  color: #8b1a1a;
+}
+
+.zen-card.zw-mode .zw-cgz {
+  color: #8a6a3a;
+}
+
+.zen-card.zw-mode .zw-dx {
+  color: #8a6a3a;
+}
+
+.zen-card.zw-mode .zw-star {
+  background: rgba(120, 80, 30, 0.1);
+  color: #4a3820;
+}
+
+.zen-card.zw-mode .zw-star.maj {
+  font-weight: 800;
+}
+
+.zen-card.zw-mode .zw-star.el-moc {
+  color: #2e7d32;
+  background: rgba(46, 125, 50, 0.1);
+}
+
+.zen-card.zw-mode .zw-star.el-hoa {
+  color: #c62828;
+  background: rgba(198, 40, 40, 0.09);
+}
+
+.zen-card.zw-mode .zw-star.el-tho {
+  color: #9c6b10;
+  background: rgba(156, 107, 16, 0.1);
+}
+
+.zen-card.zw-mode .zw-star.el-kim {
+  color: #546e7a;
+  background: rgba(84, 110, 122, 0.11);
+}
+
+.zen-card.zw-mode .zw-star.el-thuy {
+  color: #1565c0;
+  background: rgba(21, 101, 192, 0.1);
+}
+
+.zen-card.zw-mode .zw-star.maj.el-kim {
+  color: #455a64;
+}
+
+.zen-card.zw-mode .zw-star.br-tot {
+  box-shadow: 0 0 4px rgba(200, 150, 40, 0.45);
+}
+
+.zen-card.zw-mode .zw-star.br-xau {
+  opacity: 0.62;
+}
+
+.zen-card.zw-mode .zw-star.br-xau i {
+  color: #a3231c;
+}
+
+.zen-card.zw-mode .zw-star i {
+  color: #8a6a3a;
+}
+
+.zen-card.zw-mode .zw-star.has-sihua {
+  border-color: rgba(163, 35, 28, 0.5);
+}
+
+.zen-card.zw-mode .zw-cell.is-empty .zw-stars::after {
+  color: #9a8258;
+}
+
+.zen-card.zw-mode .zw-center-txt {
+  color: #4a3820;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.zen-card.zw-mode .zw-head-info {
+  color: #8a6a3a;
+}
+
+.zen-card.zw-mode .zw-head-info b {
+  color: #8b1a1a;
+}
+
+/* trung cung — ô thông tin lá số */
+.zc-h {
+  font-weight: 800;
+  color: #8b1a1a;
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  margin-top: 3px;
+}
+
+.zc-sm {
+  font-size: 10.5px;
+  color: #8a6a3a;
+}
+
+/* luận giải trên nền giấy */
+.zen-card.zw-mode .zw-detail {
+  background: linear-gradient(165deg, #fbf4e2, #f2e4c5);
+  border: 1.5px solid #b08d4f;
+  color: #4a3820;
+}
+
+.zen-card.zw-mode .zw-detail-title {
+  color: #8b1a1a;
+  font-size: 15px;
+}
+
+.zen-card.zw-mode .zw-sec-h {
+  color: #8b1a1a;
+}
+
+.zen-card.zw-mode .zw-sec-b {
+  color: #4a3820;
+}
+
+.zen-card.zw-mode .zw-sub {
+  border-color: rgba(163, 35, 28, 0.25);
+  background: rgba(163, 35, 28, 0.05);
+}
+
+.zen-card.zw-mode .zw-sub summary {
+  color: #9c6b10;
+}
+
+.zen-card.zw-mode .zw-sub summary:hover {
+  color: #8b1a1a;
+}
+
+.zen-card.zw-mode .zw-sub summary::before {
+  color: rgba(163, 35, 28, 0.5);
 }
 
 /* ===== Lưới lá số cỡ lớn (fullscreen) ===== */

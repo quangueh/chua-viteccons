@@ -117,7 +117,9 @@
       var timeIndex = Math.min(12, Math.max(0, Math.floor((hour + 1) / 2)));
       var gender = birth.gender === 'male' ? '男' : '女';
       var dateStr = birth.year + '-' + birth.month + '-' + birth.day;
-      var chart = window.iztro.astro.bySolar(dateStr, timeIndex, gender, true, 'vi-VN', {});
+      var chart = birth.lunar
+        ? window.iztro.astro.byLunar(dateStr, timeIndex, gender, !!birth.leapMonth, true, 'vi-VN', {})
+        : window.iztro.astro.bySolar(dateStr, timeIndex, gender, true, 'vi-VN', {});
       var palaces = (chart.palaces || []).map(normPalace);
       // sắp theo branchIdx để GRID_POS tra được
       palaces.sort(function (a, b) { return (a.branchIdx || 0) - (b.branchIdx || 0); });
@@ -134,6 +136,8 @@
         juInfo: JU_INFO[juNum] || null,
         lunarDate: chart.lunarDate || '',
         chineseDate: chart.chineseDate || '',
+        solarDate: chart.solarDate || '',
+        inputLunar: !!birth.lunar,
         zodiac: ZODIAC_VI[chart.zodiac] || chart.zodiac || '',
         sign: chart.sign || '',
         gender: birth.gender,
