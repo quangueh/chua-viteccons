@@ -198,20 +198,28 @@
       var T = window.ZiweiTexts || {};
       var p = palace;
       var domain = (T.DOMAIN || {})[p.name] || 'self';
-      var sections = [];
-
-      // 1) Header cung
-      sections.push({ h: p.name + ' cung — ' + p.stem + ' ' + (typeof p.branch === 'string' ? p.branch : ''), body: '' });
-
-      // 2) Ý nghĩa cung nền + luận sâu
-      var palaceLong = (T.PALACE_LONG || {})[p.name] || (T.PALACE_LONG || {})[p.rawName] || '';
-      if (palaceLong) sections.push({ h: 'Ý nghĩa cung ' + p.name, body: palaceLong });
       var D = window.ZiweiDeep || {};
+      var sections = [];
+      var majors = this.majorsOf(p);
+      var ZP = window.ZiweiPatterns;
+      var pats = (ZP && ZP.matchPalace) ? (ZP.matchPalace(p, allPalaces, chartObj) || []) : [];
+
+      // 1) Tổng quan — trọng tâm trước: cung + sao + cách cục + việc nên làm đầu tiên
+      var ki = PALACE_INFO[p.rawName] || PALACE_INFO[p.name] || { kw: '' };
+      var ov = 'Cung ' + p.name + ' (' + p.stem + ' ' + (typeof p.branch === 'string' ? p.branch : '') + ') — ' + (ki.kw || '');
+      ov += majors.length ? '\nChính tinh: ' + majors.map(function (s) { return s.name + (s.brightness && s.brightness !== 'Bình' ? ' ' + s.brightness : ''); }).join(', ') : '\nCung không chính tinh — chủ đề ' + p.name + ' mượn lực từ cung đối và tam hợp.';
+      if (pats.length) ov += '\nCách cục nổi bật: ' + pats.slice(0, 2).map(function (x) { return x.name; }).join(' · ');
+      var firstAct = ((D.PALACE_ACTION || {})[p.name] || {}).should;
+      if (firstAct && firstAct.length) ov += '\n→ Việc nên làm trước: ' + firstAct[0];
+      sections.push({ h: 'Tổng quan', body: ov, main: true });
+
+      // 2) Ý nghĩa cung nền + luận sâu (thu gọn — dài)
+      var palaceLong = (T.PALACE_LONG || {})[p.name] || (T.PALACE_LONG || {})[p.rawName] || '';
+      if (palaceLong) sections.push({ h: 'Ý nghĩa cung ' + p.name + ' (chi tiết)', body: palaceLong, sub: true });
       var palaceDeep = (D.PALACE_DEEP || {})[p.name] || '';
-      if (palaceDeep) sections.push({ h: 'Luận sâu cung ' + p.name, body: palaceDeep });
+      if (palaceDeep) sections.push({ h: 'Luận sâu cung ' + p.name, body: palaceDeep, sub: true });
 
       // 3) Cung không?
-      var majors = this.majorsOf(p);
       if (p.empty || majors.length === 0) {
         sections.push({ h: 'Cung không chính tinh', body: (T.EMPTY_PALACE_TEXT || '') });
         // mượn sao đối cung
@@ -245,7 +253,7 @@
           if (starAct.health) body += '\n• SỨC KHỎE: ' + starAct.health;
           if (starAct.finance) body += '\n• TÀI CHÍNH: ' + starAct.finance;
         }
-        sections.push({ h: s.name + (s.brightness ? ' (' + s.brightness + ')' : '') + (s.sihua ? ' — ' + s.sihua : ''), body: body });
+        sections.push({ h: s.name + (s.brightness ? ' (' + s.brightness + ')' : '') + (s.sihua ? ' — ' + s.sihua : ''), body: body, main: true });
       });
 
       // 4c) Ngũ hành tương quan — hành cung vs hành sao (sinh/khắc)
@@ -271,20 +279,16 @@
         elLines.push(badCount === 0 ? 'Tổng thể: ngũ hành tương sinh tương hòa — cung này thuận lợi, sao phát huy tốt.' :
           goodCount > badCount ? 'Tổng thể: được tương sinh nhiều hơn tương khắc — cung này vẫn có nền tảng tốt, chỉ cần lưu ý các sao bị khắc chế.' :
             'Tổng thể: tương khắc chiếm ưu thế — cung này cần chế hóa, tránh quyết định lớn và giữ sức khỏe tinh thần.');
-        sections.push({ h: 'Ngũ hành tương quan', body: elLines.join('\n') });
+        sections.push({ h: 'Ngũ hành tương quan', body: elLines.join('\n'), sub: true });
       }
 
       // 4b) Cách cục nhận diện — matching tổ hợp sao kinh điển
-      var ZP = window.ZiweiPatterns;
-      if (ZP && ZP.matchPalace) {
-        var pats = ZP.matchPalace(p, allPalaces, chartObj) || [];
-        if (pats.length) {
-          var LEVEL_VI = { excellent: 'Đại cách ★★★', good: 'Cách tốt ★★', neutral: 'Cách trung ★', caution: 'Cách cần đề phòng ⚠' };
-          var patBody = pats.map(function (pt) {
-            return '◆ ' + pt.name + ' [' + (LEVEL_VI[pt.level] || pt.level) + ']\n' + pt.desc;
-          }).join('\n\n');
-          sections.push({ h: 'Cách cục nhận diện (' + pats.length + ' cách)', body: patBody });
-        }
+      if (pats.length) {
+        var LEVEL_VI = { excellent: 'Đại cách ★★★', good: 'Cách tốt ★★', neutral: 'Cách trung ★', caution: 'Cách cần đề phòng ⚠' };
+        var patBody = pats.map(function (pt) {
+          return '◆ ' + pt.name + ' [' + (LEVEL_VI[pt.level] || pt.level) + ']\n' + pt.desc;
+        }).join('\n\n');
+        sections.push({ h: 'Cách cục nhận diện (' + pats.length + ' cách)', body: patBody, main: true });
       }
 
       // 5) Phụ tinh hội chiếu
@@ -294,7 +298,7 @@
           var info = (T.MINOR_INFO || {})[s.name] || s.name;
           return '• ' + info + (s.brightness && s.brightness !== 'Bình' ? ' (' + s.brightness + ')' : '');
         });
-        sections.push({ h: 'Phụ tinh hội chiếu (' + minors.length + ' sao)', body: minorLines.join('\n') });
+        sections.push({ h: 'Phụ tinh hội chiếu (' + minors.length + ' sao)', body: minorLines.join('\n'), sub: true });
       }
 
       // 6) Tam phương tứ chính — đối cung + tam hợp
@@ -309,12 +313,12 @@
         var tamTxt = '';
         if (opp) tamTxt += '• Cung đối (xung chiếu): ' + opp.name + ' — ' + (this.majorsOf(opp).map(function (s) { return s.name; }).join(', ') || 'không chính tinh') + '\n';
         if (tamHop.length) tamTxt += '• Tam hợp: ' + tamHop.join(' · ') + '\n';
-        if (tamTxt) sections.push({ h: 'Tam phương tứ chính', body: tamTxt.trim() });
+        if (tamTxt) sections.push({ h: 'Tam phương tứ chính', body: tamTxt.trim(), sub: true });
       }
 
       // 7) Đại hạn qua cung này
       if (p.decadal) {
-        sections.push({ h: 'Đại hạn qua cung này', body: 'Tuổi ' + p.decadal[0] + '–' + p.decadal[1] + ': thời kỳ này cung ' + p.name + ' phát vận — chú ý các sao tọa thủ và sao lưu niên để biết cụ thể hơn.' });
+        sections.push({ h: 'Đại hạn qua cung này', body: 'Tuổi ' + p.decadal[0] + '–' + p.decadal[1] + ': thời kỳ này cung ' + p.name + ' phát vận — chú ý các sao tọa thủ và sao lưu niên để biết cụ thể hơn.', sub: true });
       }
 
       // 8) Hành động cụ thể theo cung — NÊN/TRÁNH/NGHỀ/SỨC KHỎE/TÀI CHÍNH
@@ -326,12 +330,12 @@
         if (palaceAct.career) actBody += 'NGHỀ PHÙ HỢP: ' + palaceAct.career + '\n\n';
         if (palaceAct.health) actBody += 'SỨC KHỎE: ' + palaceAct.health + '\n\n';
         if (palaceAct.timing) actBody += 'THỜI ĐIỂM: ' + palaceAct.timing;
-        sections.push({ h: 'Hành động cụ thể cung ' + p.name, body: actBody.trim() });
+        sections.push({ h: 'Hành động cụ thể cung ' + p.name, body: actBody.trim(), main: true });
       }
 
       // 9) Lời khuyên
       var advice = (T.PALACE_ADVICE || {})[p.name] || '';
-      if (advice) sections.push({ h: 'Lời khuyên', body: advice });
+      if (advice) sections.push({ h: 'Lời khuyên', body: advice, sub: true });
 
       return { title: p.name + ' cung — ' + p.stem + ' ' + (typeof p.branch === 'string' ? p.branch : ''), sections: sections };
     },
@@ -359,6 +363,14 @@
     GRID_POS: GRID_POS,
     PALACE_INFO: PALACE_INFO,
     STAR_INFO: STAR_INFO,
-    JU_INFO: JU_INFO
+    JU_INFO: JU_INFO,
+    /* hành của 14 chính tinh → tô màu sao trên lá số */
+    STAR_EL: { 'Tử Vi': 'Thổ', 'Thiên Cơ': 'Mộc', 'Thái Dương': 'Hỏa', 'Vũ Khúc': 'Kim', 'Thiên Đồng': 'Thủy', 'Liêm Trinh': 'Hỏa', 'Thiên Phủ': 'Thổ', 'Thái Âm': 'Thủy', 'Tham Lang': 'Mộc', 'Cự Môn': 'Thủy', 'Thiên Tướng': 'Thủy', 'Thiên Lương': 'Thổ', 'Thất Sát': 'Kim', 'Phá Quân': 'Thủy' },
+    /* nhóm cung → màu nhấn ô cung */
+    PALACE_CAT: {
+      'Mệnh': 'ming', 'Phu Thê': 'phu-the', 'Tử Tức': 'tu-tuc', 'Tài Bạch': 'tai-bach',
+      'Tật Ách': 'tat-ach', 'Thiên Di': 'thien-di', 'Nô Bộc': 'no-boc', 'Quan Lộc': 'quan-loc',
+      'Điền Trạch': 'dien-trach', 'Phúc Đức': 'phuc-duc', 'Phụ Mẫu': 'phu-mau', 'Huynh Đệ': 'huynh-de'
+    }
   };
 })();

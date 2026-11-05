@@ -2316,9 +2316,12 @@ import { makeDevotee } from './chars3d.js';
     const MAJORS = ['Tử Vi', 'Thiên Cơ', 'Thái Dương', 'Vũ Khúc', 'Thiên Đồng', 'Liêm Trinh', 'Thiên Phủ', 'Thái Âm', 'Tham Lang', 'Cự Môn', 'Thiên Tướng', 'Thiên Lương', 'Thất Sát', 'Phá Quân'];
     function starHtml(s) {
       const isMaj = MAJORS.indexOf(s.name) >= 0;
+      const el = (ZW.STAR_EL || {})[s.name] || '';
+      const elCls = el === 'Mộc' ? ' el-moc' : el === 'Hỏa' ? ' el-hoa' : el === 'Thổ' ? ' el-tho' : el === 'Kim' ? ' el-kim' : el === 'Thủy' ? ' el-thuy' : '';
+      const brCls = s.brightness === 'Miếu' || s.brightness === 'Vượng' ? ' br-tot' : (s.brightness === 'Hãm' || s.brightness === 'Bất' ? ' br-xau' : '');
       const sihua = s.sihua ? `<em class="zw-sihua">${s.sihua.replace('Hóa ', '')}</em>` : '';
       const br = s.brightness && s.brightness !== 'Bình' ? `<i>${s.brightness}</i>` : '';
-      return `<span class="zw-star${isMaj ? ' maj' : ''}${s.sihua ? ' has-sihua' : ''}">${escapeHtml(s.name)}${sihua}${br}</span>`;
+      return `<span class="zw-star${isMaj ? ' maj' : ''}${elCls}${brCls}${s.sihua ? ' has-sihua' : ''}" title="${escapeHtml(s.name)} — ${el}">${escapeHtml(s.name)}${sihua}${br}</span>`;
     }
     function renderZwChart(c) {
       // đảo GRID_POS: [row,col] → palace
@@ -2352,7 +2355,8 @@ import { makeDevotee } from './chars3d.js';
             continue;
           }
           const majors = ZW.majorsOf(p);
-          const cls = [p.isMing ? 'is-ming' : '', p.isShen || p.isBody ? 'is-shen' : '', p.empty ? 'is-empty' : ''].join(' ');
+          const cat = (ZW.PALACE_CAT || {})[p.name] || '';
+          const cls = [cat ? 'pc-' + cat : '', p.isMing ? 'is-ming' : '', p.isShen || p.isBody ? 'is-shen' : '', p.empty ? 'is-empty' : ''].join(' ');
           const starsSorted = p.stars.slice().sort((a, b) => (MAJORS.indexOf(b.name) >= 0 ? 1 : 0) - (MAJORS.indexOf(a.name) >= 0 ? 1 : 0));
           html += `<div class="zw-cell ${cls}" data-zw-branch="${p.branchIdx}" data-zw-palace="${c.palaces.indexOf(p)}">
             <div class="zw-cname">${escapeHtml(p.name)}</div>
@@ -2436,8 +2440,13 @@ import { makeDevotee } from './chars3d.js';
       const tip = ZW.palaceDetail ? ZW.palaceDetail(zwChart, p, zwChart.palaces) : ZW.palaceTip(p);
       let s = `<div class="zw-detail-title">${escapeHtml(tip.title)}</div>`;
       (tip.sections || [{ h: '', body: tip.body }]).forEach((sec) => {
-        if (sec.h) s += `<div class="zw-sec-h">${escapeHtml(sec.h)}</div>`;
-        if (sec.body) s += `<div class="zw-sec-b">${escapeHtml(sec.body).replace(/\n/g, '<br>')}</div>`;
+        if (sec.sub) {
+          if (sec.h) s += `<details class="zw-sub"><summary>${escapeHtml(sec.h)}</summary><div class="zw-sec-b">${escapeHtml(sec.body).replace(/\n/g, '<br>')}</div></details>`;
+          else s += `<div class="zw-sec-b">${escapeHtml(sec.body).replace(/\n/g, '<br>')}</div>`;
+        } else {
+          if (sec.h) s += `<div class="zw-sec-h">${escapeHtml(sec.h)}</div>`;
+          if (sec.body) s += `<div class="zw-sec-b">${escapeHtml(sec.body).replace(/\n/g, '<br>')}</div>`;
+        }
       });
       det.innerHTML = s;
       det.scrollTop = 0;
