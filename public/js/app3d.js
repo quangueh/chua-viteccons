@@ -1195,8 +1195,14 @@ import { makeDevotee } from './chars3d.js';
       el.innerHTML = `⏳ <b>${escapeHtml(saved)}</b> đang xếp hàng — vị trí <b>#${qIdx + 1}</b>`;
       return;
     }
+    // đã ghi danh nhưng không chiếu/hàng chờ (F5/reload giữ tên, mất ghế) → tự mở lại luồng chọn chiếu
+    if (!reopenTried) {
+      reopenTried = true;
+      setTimeout(() => registerFlow(saved), 500);
+    }
     el.innerHTML = `Đã ghi danh <b>${escapeHtml(saved)}</b> — bấm <b>Ghi Danh & Chọn Chiếu</b> để chọn chỗ`;
   }
+  let reopenTried = false;
 
   function refreshOnlineCount(st) {
     const el = document.getElementById('statOnline');
