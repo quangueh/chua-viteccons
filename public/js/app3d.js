@@ -2238,6 +2238,8 @@ import { makeDevotee } from './chars3d.js';
     const scoreColor = (s) => s >= 8 ? '#8fe0a0' : s >= 5 ? '#ffd98a' : '#ff9a9a';
 
     function renderZen(tab) {
+      const card = document.querySelector('.zen-card');
+      if (card) card.classList.toggle('zw-mode', tab === 'chart');
       const birth = getBirth();
       if (zenBirth && birth) zenBirth.value = birth;
       let html = '';
@@ -2319,7 +2321,8 @@ import { makeDevotee } from './chars3d.js';
       const el = (ZW.STAR_EL || {})[s.name] || '';
       const elCls = el === 'Mộc' ? ' el-moc' : el === 'Hỏa' ? ' el-hoa' : el === 'Thổ' ? ' el-tho' : el === 'Kim' ? ' el-kim' : el === 'Thủy' ? ' el-thuy' : '';
       const brCls = s.brightness === 'Miếu' || s.brightness === 'Vượng' ? ' br-tot' : (s.brightness === 'Hãm' || s.brightness === 'Bất' ? ' br-xau' : '');
-      const sihua = s.sihua ? `<em class="zw-sihua">${s.sihua.replace('Hóa ', '')}</em>` : '';
+      const sihuaMap = { 'Hóa Lộc': 'sh-loc', 'Hóa Quyền': 'sh-quyen', 'Hóa Khoa': 'sh-khoa', 'Hóa Kỵ': 'sh-ky' };
+      const sihua = s.sihua ? `<em class="zw-sihua ${sihuaMap[s.sihua] || ''}">${s.sihua.replace('Hóa ', '')}</em>` : '';
       const br = s.brightness && s.brightness !== 'Bình' ? `<i>${s.brightness}</i>` : '';
       return `<span class="zw-star${isMaj ? ' maj' : ''}${elCls}${brCls}${s.sihua ? ' has-sihua' : ''}" title="${escapeHtml(s.name)} — ${el}">${escapeHtml(s.name)}${sihua}${br}</span>`;
     }
@@ -2329,12 +2332,8 @@ import { makeDevotee } from './chars3d.js';
       c.palaces.forEach((p) => { const pos = ZW.GRID_POS[p.branchIdx]; if (pos) byPos[pos[0] + ',' + pos[1]] = p; });
       const ming = c.palaces.filter((p) => p.isMing)[0];
       const shen = c.palaces.filter((p) => p.isShen || p.isBody)[0];
-      let html = `<div class="zw-head-info">
-        <div><b>${escapeHtml(c.chineseDate || '')}</b> · ${escapeHtml(c.lunarDate || '')}</div>
-        <div>Cục: <b>${escapeHtml(c.juName)}</b> · Tuổi ${escapeHtml(c.zodiac)} · ${escapeHtml(c.sign)}</div>
-        <div>Mệnh cung tại <b>${ming ? escapeHtml(ming.branch) + ' (' + escapeHtml(ming.name) + ')' : '?'}</b>${shen && shen !== ming ? ` · Thân cư <b>${escapeHtml(shen.name)}</b>` : ''}</div>
-      </div>`;
-      html += `<div class="zw-grid">`;
+      let html = '';
+      html += `<div class="zw-grid zw-grid-lg">`;
       for (let r = 0; r < 4; r++) {
         for (let col = 0; col < 4; col++) {
           const p = byPos[r + ',' + col];
@@ -2366,8 +2365,17 @@ import { makeDevotee } from './chars3d.js';
           </div>`;
         }
       }
-      html += `</div><div class="zw-detail" id="zwDetail"><i>Bấm vào một cung để xem luận giải chi tiết.</i></div>`;
-      return html;
+      html += `</div>`;
+      // layout 2 cột: lá số trái, luận giải phải (fullscreen)
+      return `<div class="zw-head-info zw-head-top">
+        <div><b>${escapeHtml(c.chineseDate || '')}</b> · ${escapeHtml(c.lunarDate || '')}</div>
+        <div>Cục: <b>${escapeHtml(c.juName)}</b> · Tuổi ${escapeHtml(c.zodiac)} · ${escapeHtml(c.sign)}</div>
+        <div>Mệnh cung tại <b>${ming ? escapeHtml(ming.branch) + ' (' + escapeHtml(ming.name) + ')' : '?'}</b>${shen && shen !== ming ? ` · Thân cư <b>${escapeHtml(shen.name)}</b>` : ''}</div>
+      </div>
+      <div class="zw-layout">
+        <div class="zw-chart-col">${html}</div>
+        <div class="zw-detail" id="zwDetail"><i>👆 Bấm vào một cung trên lá số để xem luận giải chi tiết.</i></div>
+      </div>`;
     }
 
     /* ---------- render hạn vận ---------- */

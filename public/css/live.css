@@ -2645,6 +2645,140 @@ html.need-name .name-gate-overlay {
   margin-top: 3px;
 }
 
+/* ===== Chế độ toàn màn hình tab Tử Vi ===== */
+.zen-card.zw-mode {
+  width: min(1560px, 97vw);
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.zen-card.zw-mode .zen-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.zen-card.zw-mode .zw-head-top {
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+
+.zw-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.zw-chart-col {
+  flex: 0 0 600px;
+  min-width: 0;
+}
+
+.zw-detail {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+  max-height: 72vh;
+  position: sticky;
+  top: 0;
+}
+
+@media (max-width: 980px) {
+  .zw-layout {
+    flex-direction: column;
+  }
+
+  .zw-chart-col {
+    flex: none;
+    width: 100%;
+  }
+
+  .zw-detail {
+    max-height: 50vh;
+    position: static;
+  }
+
+  .zen-card.zw-mode {
+    width: 96vw;
+    max-height: 92vh;
+  }
+}
+
+/* ===== Lưới lá số cỡ lớn (fullscreen) ===== */
+.zw-grid-lg {
+  grid-auto-rows: minmax(112px, auto);
+}
+
+.zw-grid-lg .zw-star {
+  font-size: 12.5px;
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+
+.zw-grid-lg .zw-star i {
+  font-size: 10px;
+}
+
+.zw-grid-lg .zw-sihua,
+.zw-grid-lg .zw-star .zw-sihua {
+  font-size: 10.5px;
+}
+
+.zw-grid-lg .zw-cname {
+  font-size: 13.5px;
+}
+
+.zw-grid-lg .zw-cgz {
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+
+.zw-grid-lg .zw-dx {
+  font-size: 10px;
+}
+
+.zw-grid-lg .zw-center-txt {
+  font-size: 12.5px;
+}
+
+.zw-grid-lg .zw-stars {
+  gap: 3px;
+}
+
+@media (max-width: 560px) {
+  .zw-grid-lg {
+    grid-auto-rows: minmax(78px, auto);
+  }
+
+  .zw-grid-lg .zw-star {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+
+  .zw-grid-lg .zw-cname {
+    font-size: 11px;
+  }
+}
+
+/* ===== Màu tứ hóa chuẩn: Lộc đỏ, Quyền lam, Khoa lục, Kỵ đỏ đậm ===== */
+.zw-sihua.sh-loc {
+  color: #ff5a5a;
+}
+
+.zw-sihua.sh-quyen {
+  color: #5aa8ff;
+}
+
+.zw-sihua.sh-khoa {
+  color: #5ad07a;
+}
+
+.zw-sihua.sh-ky {
+  color: #ff4040;
+  font-weight: 900;
+  text-shadow: 0 0 4px rgba(255, 64, 64, 0.4);
+}
+
 /* ===== Tô màu sao theo ngũ hành + độ sáng ===== */
 .zw-star.el-moc {
   color: #b8f09a;
