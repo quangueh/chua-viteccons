@@ -1835,6 +1835,38 @@ import { makeDevotee } from './chars3d.js';
       sendChatMsg();
     });
   });
+
+  // ── Nhập bằng giọng nói (Web Speech API, tiếng Việt) ──
+  function bindVoice(btnId, inputId) {
+    const btn = document.getElementById(btnId);
+    const inp = document.getElementById(inputId);
+    if (!btn || !inp) return;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { btn.style.display = 'none'; return; } // trình duyệt không hỗ trợ → ẩn nút
+    let rec = null, on = false;
+    btn.addEventListener('click', () => {
+      if (on) { try { rec?.stop(); } catch (_) { } return; }
+      try {
+        rec = new SR();
+        rec.lang = 'vi-VN';
+        rec.interimResults = false;
+        rec.maxAlternatives = 1;
+        rec.onresult = (e) => {
+          const text = e.results?.[0]?.[0]?.transcript || '';
+          if (text) inp.value = (inp.value ? inp.value + ' ' : '') + text;
+          inp.focus();
+        };
+        rec.onend = () => { on = false; btn.classList.remove('listening'); };
+        rec.onerror = () => { on = false; btn.classList.remove('listening'); };
+        rec.start();
+        on = true;
+        btn.classList.add('listening');
+        toast('🎤 Đang nghe... nói xong tự điền vào ô');
+      } catch (_) { on = false; btn.classList.remove('listening'); }
+    });
+  }
+  bindVoice('btnChatMic', 'chatInput');
+  bindVoice('btnWishMic', 'inputDevoteeWish');
   const toggleChat = () => {
     chatPanel?.classList.toggle('collapsed');
     if (!chatPanel?.classList.contains('collapsed')) {

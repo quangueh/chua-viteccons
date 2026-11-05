@@ -287,7 +287,7 @@ window.TempleLocal = (function () {
       state.activeIncenseSticks = Math.min(36, state.activeIncenseSticks + count);
       const devotee = recordDevotee(user, uniqueId, avatar, merit, count, 0, wish);
       const ttsText = params.readTts === false ? '' : `Nam mô A Di Đà Phật. Cảm tạ thí chủ ${devotee.name} đã thành tâm thắp ${count} nén hương thơm. ${wish}.`;
-      const event = pushEventLog({ type: 'burnIncense', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, count, merit, wish, ttsText, ttsVoice: 'vi-VN' });
+      const event = pushEventLog({ type: 'burnIncense', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, count, merit, wish, wishCustom: !!sanitizeWishText(params.wish), ttsText, ttsVoice: 'vi-VN' });
       broadcastRitual(event, devotee);
       saveState();
       return { event, state: getPublicState() };
@@ -317,7 +317,7 @@ window.TempleLocal = (function () {
       state.bellRings += count;
       const devotee = recordDevotee(user, uniqueId, avatar, merit, 0, 0, wish);
       const ttsText = params.readTts ? `Thí chủ ${devotee.name} thỉnh Đại Hồng Chung cầu nguyện: ${wish}.` : '';
-      const event = pushEventLog({ type: 'ringBell', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, count, merit, wish, ttsText, ttsVoice: 'vi-VN' });
+      const event = pushEventLog({ type: 'ringBell', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, count, merit, wish, wishCustom: !!sanitizeWishText(params.wish), ttsText, ttsVoice: 'vi-VN' });
       broadcastRitual(event, devotee);
       saveState();
       return { event, state: getPublicState() };
@@ -332,7 +332,7 @@ window.TempleLocal = (function () {
       state.lanternCount += 1;
       const devotee = recordDevotee(user, uniqueId, avatar, merit, 1, 0, wish);
       const ttsText = params.readTts === false ? '' : `Lời cầu nguyện của thí chủ ${devotee.name}: ${wish}. Nam mô A Di Đà Phật.`;
-      const event = pushEventLog({ type: 'sendPrayer', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, wish, merit, ttsText, ttsVoice: 'vi-VN' });
+      const event = pushEventLog({ type: 'sendPrayer', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, wish, merit, wishCustom: !!sanitizeWishText(params.wish), ttsText, ttsVoice: 'vi-VN' });
       broadcastRitual(event, devotee);
       saveState();
       return { event, state: getPublicState() };
@@ -356,7 +356,7 @@ window.TempleLocal = (function () {
       const wish = params.wish || `Dâng cúng ${giftName} lên Tam Bảo`;
       const devotee = recordDevotee(user, uniqueId, avatar, merit, 3, 1, wish);
       const ttsText = params.readTts === false ? '' : `Công đức vô lượng! Cảm tạ thí chủ ${devotee.name} đã phát tâm dâng cúng ${giftName}, tích thêm ${merit} điểm công đức. Nguyện cầu chư Phật gia hộ cho thí chủ vạn sự cát tường như ý.`;
-      const event = pushEventLog({ type: giftType === 'dragon' ? 'grandCeremony' : 'offerGift', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, giftType, giftName, coins, merit, wish, ttsText, ttsVoice: 'vi-VN' });
+      const event = pushEventLog({ type: giftType === 'dragon' ? 'grandCeremony' : 'offerGift', user: devotee.name, uniqueId: devotee.uniqueId, avatar: devotee.avatar, giftType, giftName, coins, merit, wish, wishCustom: !!String(params.wish || '').trim(), ttsText, ttsVoice: 'vi-VN' });
       broadcastRitual(event, devotee);
       saveState();
       return { event, state: getPublicState() };

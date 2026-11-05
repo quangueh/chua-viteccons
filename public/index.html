@@ -13,7 +13,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Noto+Serif:wght@700;900&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="/css/live.css?v=24" />
+  <link rel="stylesheet" href="/css/live.css?v=25" />
   <script>
     // Cổng pháp danh: chưa ghi danh → chặn vào chùa (chạy đồng bộ, không flash cho người đã ghi danh)
     try {
@@ -238,7 +238,11 @@
 
       <div class="dock-section">
         <div class="dock-section-title">🙏 Thành Tâm Dâng Lễ</div>
-        <input type="text" id="inputDevoteeWish" class="dock-input" placeholder="Lời cầu nguyện..." />
+        <div class="wish-input-wrap">
+          <input type="text" id="inputDevoteeWish" class="dock-input"
+            placeholder="Lời cầu nguyện... (hoặc bấm 🎤 để nói)" />
+          <button class="chat-mic" id="btnWishMic" title="Nói lời nguyện">🎤</button>
+        </div>
 
         <div class="dock-grid-2">
           <button class="dock-btn gold" id="btnRpcIncense">🔥 Thắp 3 Nén Hương</button>
@@ -303,6 +307,7 @@
         <div class="chat-input-row">
           <input type="text" id="chatInput" class="chat-input" maxlength="140" placeholder="Nhắn gì đó..."
             autocomplete="off" />
+          <button class="chat-mic" id="btnChatMic" title="Nhắn bằng giọng nói">🎤</button>
           <button class="chat-send" id="btnChatSend" title="Gửi">➤</button>
         </div>
       </div>
@@ -351,13 +356,13 @@
   <script src="/vendor/gsap.min.js"></script>
   <script src="/js/vendor/firebase-app-compat.js"></script>
   <script src="/js/vendor/firebase-database-compat.js"></script>
-  <script src="/js/firebase-config.js?v=24"></script>
+  <script src="/js/firebase-config.js?v=25"></script>
   <script src="/js/vendor/mqtt.min.js"></script>
-  <script src="/js/presence.js?v=24"></script>
-  <script src="/js/standalone.js?v=24"></script>
-  <script src="/js/audio.js?v=24"></script>
-  <script src="/js/fortune.js?v=24"></script>
-  <script type="module" src="/js/app3d.js?v=24"></script>
+  <script src="/js/presence.js?v=25"></script>
+  <script src="/js/standalone.js?v=25"></script>
+  <script src="/js/audio.js?v=25"></script>
+  <script src="/js/fortune.js?v=25"></script>
+  <script type="module" src="/js/app3d.js?v=25"></script>
 </body>
 
 </html>

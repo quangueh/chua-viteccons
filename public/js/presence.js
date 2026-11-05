@@ -852,6 +852,7 @@ const FirebaseNet = function () {
   function sendRitual(evt) {
     if (!eventsRef || dead) return;
     try {
+      const wishText = String(evt.wish || '').trim();
       eventsRef.push({
         app: 'cv1', kind: evt.type, sid, name: me.name,
         wish: String(evt.wish || evt.giftName || '').slice(0, 140),
@@ -859,6 +860,14 @@ const FirebaseNet = function () {
         fno: evt.fortune?.number || 0, frank: evt.fortune?.rank || '', ftitle: evt.fortune?.title || '',
         seat: me.seat, ts: firebase.database.ServerValue.TIMESTAMP
       });
+      // lời cầu nguyện TỰ GÕ của thí chủ → lưu vào chat chung để mọi người cùng thấy nguyện
+      if (wishText && evt.wishCustom && chatRef && me.name) {
+        chatRef.push({
+          app: 'cv1', sid, name: me.name,
+          text: `🙏 ${wishText}`.slice(0, 140),
+          ts: firebase.database.ServerValue.TIMESTAMP
+        });
+      }
     } catch (_) { }
   }
 
