@@ -2197,19 +2197,41 @@ import { makeDevotee } from './chars3d.js';
     const zenBirth = document.getElementById('zenBirth');
     if (!F || !zenModal || !zenBody) return;
 
-    const getBirth = () => {
-      let b = localStorage.getItem('chua_vt_birthday') || '';
-      if (zenBirth && zenBirth.value) b = zenBirth.value;
-      return /^\d{4}-\d{2}-\d{2}$/.test(b) ? b : '';
+    const zenHour = document.getElementById('zenHour');
+    const zenGender = document.getElementById('zenGender');
+    const ZW = window.Ziwei;
+
+    /* birth: {d:'YYYY-MM-DD', h:0-23, g:'male'|'female'} — migrate từ key cũ */
+    const getBirthObj = () => {
+      try {
+        const b = JSON.parse(localStorage.getItem('chua_vt_birth') || 'null');
+        if (b && /^\d{4}-\d{2}-\d{2}$/.test(b.d || '')) return b;
+      } catch (e) { /* ignore */ }
+      const old = localStorage.getItem('chua_vt_birthday') || '';
+      return /^\d{4}-\d{2}-\d{2}$/.test(old) ? { d: old, h: 12, g: 'male' } : null;
     };
+    const getBirth = () => (zenBirth && zenBirth.value) || (getBirthObj() || {}).d || '';
     const saveBirth = () => {
       const v = zenBirth?.value || '';
       if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
-        localStorage.setItem('chua_vt_birthday', v);
-        toast('🔮 Đã lập lá số — xem vận hạn hôm nay nào');
+        localStorage.setItem('chua_vt_birth', JSON.stringify({
+          d: v, h: parseInt(zenHour?.value || '12', 10), g: zenGender?.value || 'male'
+        }));
+        zwChart = null; buildZw();
+        toast('🔮 Đã lập lá số tử vi — xem cung mệnh và hạn vận nào');
       }
       renderZen(zenTab);
     };
+
+    let zwChart = null;
+    function buildZw() {
+      const b = getBirthObj();
+      if (b && ZW && ZW.available()) {
+        const [y, m, d] = b.d.split('-').map(Number);
+        try { zwChart = ZW.buildChart({ year: y, month: m, day: d, hour: b.h || 12, gender: b.g || 'male' }); } catch (e) { zwChart = null; }
+      } else zwChart = null;
+      return zwChart;
+    }
 
     let zenTab = 'today';
     const scoreColor = (s) => s >= 8 ? '#8fe0a0' : s >= 5 ? '#ffd98a' : '#ff9a9a';
@@ -2258,34 +2280,164 @@ import { makeDevotee } from './chars3d.js';
             <span class="d-why">${escapeHtml(d.why)}</span>
           </div>`;
         });
-      } else { // chart
-        if (!birth) {
-          html = `<h4>📜 Lá số tứ trụ</h4><p style="color:var(--muted-gold)">Nhập năm sinh dương lịch ở trên rồi bấm "Lập lá số".</p>`;
+      } else if (tab === 'chart') {
+        // ── Lá số TỬ VI ĐẨU SỐ thật (iztro engine) ──
+        const b = getBirthObj();
+        if (!b) {
+          html = `<h4>📜 Lá số Tử Vi</h4><p style="color:var(--muted-gold)">Nhập ngày sinh + giờ sinh + giới tính ở trên rồi bấm "Lập lá số".</p>`;
+        } else if (!ZW || !ZW.available()) {
+          html = `<h4>📜 Lá số Tử Vi</h4><p style="color:var(--muted-gold)">Engine tử vi chưa sẵn sàng — thử tải lại trang.</p>`;
         } else {
-          const ls = F.laSo(birth);
-          html += `<h4>📜 Lá số — ${ls.conGiap} (${ls.tuoi} ${ls.tuoiEl})</h4>`;
-          html += `<div class="zen-chart-grid">
-            <div class="zen-chart-cell"><div class="cz-label">Năm</div><div class="cz-val">${ls.nam.label}</div></div>
-            <div class="zen-chart-cell"><div class="cz-label">Tháng</div><div class="cz-val">${ls.thang.label}</div></div>
-            <div class="zen-chart-cell"><div class="cz-label">Ngày</div><div class="cz-val">${ls.ngay.label}</div></div>
-          </div>`;
-          html += `<p>Mệnh hành: <b style="color:${F.EL_INFO[ls.menh].color}">${ls.menh}</b> — sinh năm ${ls.nam.label}, tuổi ${ls.conGiap}.</p>`;
-          const li = F.EL_INFO[ls.menh];
-          html += `<div class="zen-lucky">
-            <span>Màu: <b style="color:${li.color}">${li.uni}</b></span>
-            <span>Hướng: <b>${li.dir}</b></span>
-            <span>Số: <b>${li.num}</b></span>
-            <span>Vật: <b>${li.item}</b></span>
-          </div>`;
+          if (!zwChart) buildZw();
+          if (!zwChart) {
+            html = `<h4>📜 Lá số Tử Vi</h4><p style="color:var(--muted-gold)">Không lập được lá số — kiểm tra lại ngày/giờ sinh.</p>`;
+          } else {
+            html += renderZwChart(zwChart);
+          }
+        }
+      } else if (tab === 'han') {
+        // ── HẠN VẬN: đại hạn / lưu niên / lưu nguyệt / lưu nhật + 12 tháng tới ──
+        const b = getBirthObj();
+        if (!b) {
+          html = `<h4>🔮 Hạn vận</h4><p style="color:var(--muted-gold)">Nhập đầy đủ ngày + giờ sinh + giới tính rồi bấm "Lập lá số".</p>`;
+        } else if (!zwChart) {
+          if (!ZW || !ZW.available()) { html = `<h4>🔮 Hạn vận</h4><p style="color:var(--muted-gold)">Engine chưa sẵn sàng.</p>`; }
+          else { buildZw(); html = zwChart ? renderZwHan(zwChart) : `<h4>🔮 Hạn vận</h4><p style="color:var(--muted-gold)">Không lập được lá số.</p>`; }
+        } else {
+          html += renderZwHan(zwChart);
         }
       }
       html += `<div class="zen-note">* Can-chi tính theo lịch thật; nội dung chỉ mang tính tham khảo tu tập, không thay thế nhân quả.</div>`;
       zenBody.innerHTML = html;
     }
 
+    /* ---------- render lá số tử vi 4×4 ---------- */
+    const MAJORS = ['Tử Vi', 'Thiên Cơ', 'Thái Dương', 'Vũ Khúc', 'Thiên Đồng', 'Liêm Trinh', 'Thiên Phủ', 'Thái Âm', 'Tham Lang', 'Cự Môn', 'Thiên Tướng', 'Thiên Lương', 'Thất Sát', 'Phá Quân'];
+    function starHtml(s) {
+      const isMaj = MAJORS.indexOf(s.name) >= 0;
+      const sihua = s.sihua ? `<em class="zw-sihua">${s.sihua.replace('Hóa ', '')}</em>` : '';
+      const br = s.brightness && s.brightness !== 'Bình' ? `<i>${s.brightness}</i>` : '';
+      return `<span class="zw-star${isMaj ? ' maj' : ''}${s.sihua ? ' has-sihua' : ''}">${escapeHtml(s.name)}${sihua}${br}</span>`;
+    }
+    function renderZwChart(c) {
+      // đảo GRID_POS: [row,col] → palace
+      const byPos = {};
+      c.palaces.forEach((p) => { const pos = ZW.GRID_POS[p.branchIdx]; if (pos) byPos[pos[0] + ',' + pos[1]] = p; });
+      const ming = c.palaces.filter((p) => p.isMing)[0];
+      const shen = c.palaces.filter((p) => p.isShen || p.isBody)[0];
+      let html = `<div class="zw-head-info">
+        <div><b>${escapeHtml(c.chineseDate || '')}</b> · ${escapeHtml(c.lunarDate || '')}</div>
+        <div>Cục: <b>${escapeHtml(c.juName)}</b> · Tuổi ${escapeHtml(c.zodiac)} · ${escapeHtml(c.sign)}</div>
+        <div>Mệnh cung tại <b>${ming ? escapeHtml(ming.branch) + ' (' + escapeHtml(ming.name) + ')' : '?'}</b>${shen && shen !== ming ? ` · Thân cư <b>${escapeHtml(shen.name)}</b>` : ''}</div>
+      </div>`;
+      html += `<div class="zw-grid">`;
+      for (let r = 0; r < 4; r++) {
+        for (let col = 0; col < 4; col++) {
+          const p = byPos[r + ',' + col];
+          if (!p) {
+            // ô trung cung — hiển thị thông tin tóm tắt
+            if (r >= 1 && r <= 2 && col >= 1 && col <= 2) {
+              const cellIdx = (r - 1) * 2 + (col - 1);
+              const sums = [
+                ming ? `Mệnh: ${ZW.majorsOf(ming).map((s) => s.name).join(', ') || 'không chính tinh'}` : '',
+                c.juInfo ? `${c.juInfo.name}: ${c.juInfo.kw}` : '',
+                shen && shen !== ming ? `Thân cư ${shen.name} cung` : 'Thân cư Mệnh',
+                'Bấm vào cung để xem luận giải'
+              ];
+              html += `<div class="zw-cell center"><div class="zw-center-txt">${escapeHtml(sums[cellIdx] || '')}</div></div>`;
+            } else {
+              html += `<div class="zw-cell empty"></div>`;
+            }
+            continue;
+          }
+          const majors = ZW.majorsOf(p);
+          const cls = [p.isMing ? 'is-ming' : '', p.isShen || p.isBody ? 'is-shen' : '', p.empty ? 'is-empty' : ''].join(' ');
+          const starsSorted = p.stars.slice().sort((a, b) => (MAJORS.indexOf(b.name) >= 0 ? 1 : 0) - (MAJORS.indexOf(a.name) >= 0 ? 1 : 0));
+          html += `<div class="zw-cell ${cls}" data-zw-branch="${p.branchIdx}" data-zw-palace="${c.palaces.indexOf(p)}">
+            <div class="zw-cname">${escapeHtml(p.name)}</div>
+            <div class="zw-cgz">${escapeHtml(p.stem)} ${escapeHtml(typeof p.branch === 'string' ? p.branch : '')}</div>
+            <div class="zw-stars">${starsSorted.map(starHtml).join('')}</div>
+            ${p.decadal ? `<div class="zw-dx">Đại hạn ${p.decadal[0]}–${p.decadal[1]}t</div>` : ''}
+          </div>`;
+        }
+      }
+      html += `</div><div class="zw-detail" id="zwDetail"><i>Bấm vào một cung để xem luận giải chi tiết.</i></div>`;
+      return html;
+    }
+
+    /* ---------- render hạn vận ---------- */
+    function fmtHoroLevel(lv, label) {
+      if (!lv) return '';
+      const target = (lv.palaceNames || [])[0] || '';
+      let s = `<div class="zw-horo-row"><b>${label}:</b> ${escapeHtml(lv.name || '')} ${escapeHtml(lv.stem)} ${escapeHtml(lv.branch)}`;
+      if (target) s += ` — nhập cung <b>${escapeHtml(target)}</b>`;
+      s += `</div>`;
+      if (lv.mutagen && lv.mutagen.length) {
+        const muts = lv.mutagen.map((m) => `${m.label}→${escapeHtml(m.star)}`).join(' · ');
+        s += `<div class="zw-horo-mut">Tứ hóa: ${muts}</div>`;
+      }
+      if (lv.stars && lv.stars.length) {
+        const names = lv.stars.map((x) => escapeHtml(x.name)).filter(Boolean).slice(0, 10);
+        if (names.length) s += `<div class="zw-horo-stars">Sao lưu: ${names.join(', ')}</div>`;
+      }
+      return s;
+    }
+    function renderZwHan(c) {
+      let html = `<h4>🔮 Hạn vận — đại hạn · lưu niên · lưu nguyệt · lưu nhật</h4>`;
+      const h = ZW.horoscope(c);
+      if (!h) return html + `<p style="color:var(--muted-gold)">Không đọc được hạn vận.</p>`;
+      html += `<div class="zw-horo">`;
+      html += fmtHoroLevel(h.decadal, 'Đại hạn');
+      html += fmtHoroLevel(h.year, 'Lưu niên ' + new Date().getFullYear());
+      html += fmtHoroLevel(h.month, 'Lưu nguyệt');
+      html += fmtHoroLevel(h.day, 'Hôm nay (lưu nhật)');
+      html += `</div>`;
+      // 12 tháng tới
+      html += `<h4 style="margin-top:14px">🗓 Lưu nguyệt 12 tháng tới</h4>`;
+      const now = new Date();
+      const months = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
+      for (let i = 0; i < 12; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 15);
+        const iso = d.getFullYear() + '-' + (d.getMonth() + 1) + '-15';
+        const hm = ZW.horoscope(c, iso);
+        if (!hm || !hm.month) continue;
+        const lv = hm.month;
+        const palace = (lv.palaceNames || [])[0] || '';
+        const palaceInfo = palace ? (ZW.PALACE_INFO[palace] || {}) : {};
+        html += `<div class="zen-day-row">
+          <span class="d-date">${months[d.getMonth()]} ${d.getFullYear()}</span>
+          <span class="d-can">${escapeHtml(lv.stem)} ${escapeHtml(lv.branch)}</span>
+          <span class="d-why">${escapeHtml(palace)}${palaceInfo.kw ? ' — ' + escapeHtml(palaceInfo.kw.split('—')[0].trim()) : ''}</span>
+        </div>`;
+      }
+      html += `<div class="zen-note">* Hạn vận theo lá số thật (engine iztro); chỉ mang tính tham khảo.</div>`;
+      return html;
+    }
+
+    /* click cung → luận giải */
+    zenBody.addEventListener('click', (e) => {
+      const cell = e.target.closest('.zw-cell[data-zw-branch]');
+      if (!cell || !zwChart) return;
+      const idx = parseInt(cell.dataset.zwPalace, 10);
+      const p = zwChart.palaces[idx];
+      const det = document.getElementById('zwDetail');
+      if (!p || !det) return;
+      const tip = ZW.palaceDetail ? ZW.palaceDetail(zwChart, p, zwChart.palaces) : ZW.palaceTip(p);
+      let s = `<div class="zw-detail-title">${escapeHtml(tip.title)}</div>`;
+      (tip.sections || [{ h: '', body: tip.body }]).forEach((sec) => {
+        if (sec.h) s += `<div class="zw-sec-h">${escapeHtml(sec.h)}</div>`;
+        if (sec.body) s += `<div class="zw-sec-b">${escapeHtml(sec.body).replace(/\n/g, '<br>')}</div>`;
+      });
+      det.innerHTML = s;
+      det.scrollTop = 0;
+    });
+
     bind('btnZenOpen', () => {
-      const birth = getBirth();
-      if (zenBirth) zenBirth.value = birth;
+      const b = getBirthObj();
+      if (zenBirth) zenBirth.value = b ? b.d : '';
+      if (zenHour && b) zenHour.value = String(b.h != null ? b.h : 12);
+      if (zenGender && b) zenGender.value = b.g || 'male';
+      buildZw();
       zenModal.classList.add('visible');
       renderZen(zenTab);
     });

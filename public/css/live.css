@@ -2504,3 +2504,110 @@ html.need-name .name-gate-overlay {
   padding: 13px 14px;
   font-size: 14.5px;
 }
+/* ===== Lá số Tử Vi 4×4 ===== */
+.zen-select {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(216,160,60,0.4);
+  border-radius: 8px;
+  color: var(--ivory);
+  padding: 7px 8px;
+  font-size: 13px;
+}
+
+.zw-head-info {
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--muted-gold);
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+.zw-head-info b { color: var(--gold-bright); }
+
+.zw-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: minmax(86px, auto);
+  gap: 3px;
+  border: 1px solid rgba(216,160,60,0.4);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(216,160,60,0.12);
+}
+
+.zw-cell {
+  background: linear-gradient(160deg, rgba(30,18,8,0.92), rgba(18,10,5,0.95));
+  padding: 6px 5px;
+  cursor: pointer;
+  transition: background 0.2s;
+  min-width: 0;
+}
+.zw-cell:hover { background: linear-gradient(160deg, rgba(60,36,14,0.95), rgba(28,16,7,0.95)); }
+.zw-cell.empty { cursor: default; background: rgba(10,6,3,0.6); }
+.zw-cell.center { cursor: default; display: flex; align-items: center; justify-content: center; }
+.zw-center-txt { font-size: 11px; color: var(--muted-gold); text-align: center; line-height: 1.5; padding: 4px; }
+.zw-cell.is-ming { box-shadow: inset 0 0 0 1.5px rgba(255,215,120,0.55); }
+.zw-cell.is-shen { box-shadow: inset 0 0 0 1.5px rgba(120,200,255,0.4); }
+.zw-cell.is-empty .zw-stars::after { content: '· không chính tinh'; color: #888; font-size: 10px; }
+
+.zw-cname { font-size: 11.5px; font-weight: 800; color: var(--gold-bright); letter-spacing: 0.3px; }
+.zw-cgz { font-size: 10px; color: #c9a86a; margin-bottom: 3px; }
+.zw-stars { display: flex; flex-wrap: wrap; gap: 2px; }
+.zw-star {
+  font-size: 10.5px; line-height: 1.3; color: #e8d9b8;
+  background: rgba(255,255,255,0.05); border-radius: 4px; padding: 1px 4px;
+  white-space: nowrap;
+}
+.zw-star i { font-style: normal; font-size: 9px; color: #9a8a68; margin-left: 2px; }
+.zw-star.maj { color: #ffe9b0; background: rgba(216,160,60,0.18); font-weight: 700; }
+.zw-star .zw-sihua, .zw-sihua {
+  font-style: normal; font-size: 9px; font-weight: 800; margin-left: 3px;
+  color: #ffb347;
+}
+.zw-star.has-sihua { border: 1px solid rgba(255,179,71,0.45); }
+.zw-dx { font-size: 9px; color: #8a7a5c; margin-top: 3px; }
+
+.zw-detail {
+  margin-top: 10px; padding: 10px 12px; border-radius: 9px;
+  background: rgba(0,0,0,0.28); border: 1px solid rgba(216,160,60,0.25);
+  font-size: 12.5px; line-height: 1.6; color: #e8d9b8; min-height: 40px;
+}
+.zw-detail-title { color: var(--gold-bright); font-weight: 800; margin-bottom: 4px; }
+.zw-detail-body { color: #d8c9a8; }
+
+/* ===== Hạn vận ===== */
+.zw-horo { margin-bottom: 8px; }
+.zw-horo-row { font-size: 13px; color: #e8d9b8; padding: 5px 0; border-bottom: 1px dashed rgba(216,160,60,0.15); }
+.zw-horo-mut { font-size: 12px; color: #ffcf8a; padding: 3px 0 3px 14px; }
+.zw-horo-stars { font-size: 11px; color: #9a8a68; padding: 2px 0 5px 14px; }
+
+@media (max-width: 560px) {
+  .zw-grid { grid-auto-rows: minmax(64px, auto); }
+  .zw-star { font-size: 9.5px; padding: 1px 3px; }
+  .zw-cname { font-size: 10px; }
+  .zw-cell { padding: 4px 3px; }
+}
+
+/* ===== Luận giải cung — scroll ~1 trang A4 ===== */
+.zw-detail {
+  max-height: 72vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(216,160,60,0.5) transparent;
+}
+.zw-detail::-webkit-scrollbar { width: 6px; }
+.zw-detail::-webkit-scrollbar-thumb { background: rgba(216,160,60,0.4); border-radius: 3px; }
+.zw-sec-h {
+  color: var(--gold-bright);
+  font-weight: 800;
+  font-size: 13px;
+  margin: 12px 0 5px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(216,160,60,0.2);
+}
+.zw-sec-h:first-of-type { margin-top: 4px; }
+.zw-sec-b {
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: #ddd0b4;
+  text-align: justify;
+}

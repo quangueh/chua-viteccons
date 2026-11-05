@@ -13,7 +13,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Noto+Serif:wght@700;900&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="/css/live.css?v=25" />
+  <link rel="stylesheet" href="/css/live.css?v=29" />
   <script>
     // Cổng pháp danh: chưa ghi danh → chặn vào chùa (chạy đồng bộ, không flash cho người đã ghi danh)
     try {
@@ -149,15 +149,36 @@
             <button class="zen-close" id="btnZenClose">✕</button>
           </div>
           <div class="zen-birth">
-            <label>Năm sinh dương lịch:</label>
+            <label>Năm sinh:</label>
             <input type="date" id="zenBirth" min="1900-01-01" max="2026-12-31">
+            <label>Giờ sinh:</label>
+            <select id="zenHour" class="zen-select">
+              <option value="0">Tý (23h–1h)</option>
+              <option value="2">Sửu (1h–3h)</option>
+              <option value="4">Dần (3h–5h)</option>
+              <option value="6">Mão (5h–7h)</option>
+              <option value="8">Thìn (7h–9h)</option>
+              <option value="10">Tỵ (9h–11h)</option>
+              <option value="12" selected>Ngọ (11h–13h)</option>
+              <option value="14">Mùi (13h–15h)</option>
+              <option value="16">Thân (15h–17h)</option>
+              <option value="18">Dậu (17h–19h)</option>
+              <option value="20">Tuất (19h–21h)</option>
+              <option value="22">Hợi (21h–23h)</option>
+            </select>
+            <label>Giới tính:</label>
+            <select id="zenGender" class="zen-select">
+              <option value="male">Nam</option>
+              <option value="female">Nữ</option>
+            </select>
             <button class="zen-btn" id="btnZenSave">Lập lá số</button>
           </div>
           <div class="zen-tabs">
             <button class="zen-tab active" data-zt="today">Hôm Nay</button>
             <button class="zen-tab" data-zt="hours">Giờ Tốt</button>
             <button class="zen-tab" data-zt="days">Ngày Đẹp</button>
-            <button class="zen-tab" data-zt="chart">Lá Số</button>
+            <button class="zen-tab" data-zt="chart">Tử Vi</button>
+            <button class="zen-tab" data-zt="han">Hạn Vận</button>
           </div>
           <div class="zen-body" id="zenBody"></div>
         </div>
@@ -356,13 +377,16 @@
   <script src="/vendor/gsap.min.js"></script>
   <script src="/js/vendor/firebase-app-compat.js"></script>
   <script src="/js/vendor/firebase-database-compat.js"></script>
-  <script src="/js/firebase-config.js?v=25"></script>
+  <script src="/js/firebase-config.js?v=29"></script>
   <script src="/js/vendor/mqtt.min.js"></script>
-  <script src="/js/presence.js?v=25"></script>
-  <script src="/js/standalone.js?v=25"></script>
-  <script src="/js/audio.js?v=25"></script>
-  <script src="/js/fortune.js?v=25"></script>
-  <script type="module" src="/js/app3d.js?v=25"></script>
+  <script src="/js/presence.js?v=29"></script>
+  <script src="/js/standalone.js?v=29"></script>
+  <script src="/js/audio.js?v=29"></script>
+  <script src="/vendor/iztro.min.js?v=29"></script>
+  <script src="/js/fortune.js?v=29"></script>
+  <script src="/js/ziwei-texts.js?v=29"></script>
+  <script src="/js/ziwei.js?v=29"></script>
+  <script type="module" src="/js/app3d.js?v=29"></script>
 </body>
 
 </html>
