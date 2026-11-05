@@ -1828,6 +1828,13 @@ import { makeDevotee } from './chars3d.js';
   };
   bind('btnChatSend', sendChatMsg);
   chatInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMsg(); });
+  // emoji nhanh — bấm là gửi luôn (kênh đang mở: Chung hoặc Riêng)
+  document.querySelectorAll('.chat-quick').forEach((b) => {
+    b.addEventListener('click', () => {
+      if (chatInput) chatInput.value = b.dataset.emoji || '';
+      sendChatMsg();
+    });
+  });
   const toggleChat = () => {
     chatPanel?.classList.toggle('collapsed');
     if (!chatPanel?.classList.contains('collapsed')) {
@@ -1974,6 +1981,32 @@ import { makeDevotee } from './chars3d.js';
   bind('btnDuyen', openDuyen);
   bind('cardDuyen', openDuyen);
   bind('btnCloseDuyen', () => { if (duyenModal) duyenModal.hidden = true; });
+
+  // 🎲 Quay số duyên — slot-machine chạy tên rồi "trời định" 1 người, tự trao duyên
+  bind('btnDuyenRandom', () => {
+    const net = window.TempleNet;
+    if (!net) return;
+    if (net.bond) { toast('Đã có duyên rồi đạo hữu 💞'); return; }
+    const others = (net.roster()?.people || []).filter(
+      (p) => p.sid !== net.sid && p.name && p.sid !== net.bond?.sid);
+    if (!others.length) { toast('Chùa chưa có ai khác — đợi thêm đạo hữu 🙏'); return; }
+    const btn = document.getElementById('btnDuyenRandom');
+    const names = others.map((p) => p.name);
+    let i = 0, ticks = 0;
+    const orig = btn.textContent;
+    btn.disabled = true;
+    const spin = setInterval(() => {
+      btn.textContent = '🎲 ' + names[i++ % names.length];
+      if (++ticks > 16) {
+        clearInterval(spin);
+        const pick = others[Math.floor(Math.random() * others.length)];
+        btn.textContent = `🎲 Trời định: ${pick.name}`;
+        net.requestDuyen(pick.sid);
+        toast(`💞 Đã trao duyên cho ${pick.name} — chờ họ đồng ý!`);
+        setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3200);
+      }
+    }, 85);
+  });
   const endDuyen = () => { window.TempleNet?.endDuyen(); };
   bind('btnEndDuyen', endDuyen);
   bind('btnEndDuyen2', endDuyen);
@@ -2121,4 +2154,120 @@ import { makeDevotee } from './chars3d.js';
 
   resize();
   animate();
+
+  // ============================================================
+  // TỬ VI & HOÀNG ĐẠO — can-chi thật qua ChuaFortune (fortune.js)
+  // ============================================================
+  (() => {
+    const F = window.ChuaFortune;
+    const zenModal = document.getElementById('zenModal');
+    const zenBody = document.getElementById('zenBody');
+    const zenBirth = document.getElementById('zenBirth');
+    if (!F || !zenModal || !zenBody) return;
+
+    const getBirth = () => {
+      let b = localStorage.getItem('chua_vt_birthday') || '';
+      if (zenBirth && zenBirth.value) b = zenBirth.value;
+      return /^\d{4}-\d{2}-\d{2}$/.test(b) ? b : '';
+    };
+    const saveBirth = () => {
+      const v = zenBirth?.value || '';
+      if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+        localStorage.setItem('chua_vt_birthday', v);
+        toast('🔮 Đã lập lá số — xem vận hạn hôm nay nào');
+      }
+      renderZen(zenTab);
+    };
+
+    let zenTab = 'today';
+    const scoreColor = (s) => s >= 8 ? '#8fe0a0' : s >= 5 ? '#ffd98a' : '#ff9a9a';
+
+    function renderZen(tab) {
+      const birth = getBirth();
+      if (zenBirth && birth) zenBirth.value = birth;
+      let html = '';
+      if (tab === 'today') {
+        const t = F.today(birth);
+        html += `<h4>🌅 Hôm nay — ${t.dayLabel} (hành ${t.dayEl})</h4>`;
+        html += `<div><span class="zen-score" style="color:${scoreColor(t.score)}">${t.score}</span><span style="color:var(--muted-gold)">/10 vận hạn</span></div>`;
+        html += `<p style="margin:8px 0">${escapeHtml(t.relText)}</p>`;
+        html += `<p style="color:var(--muted-gold)">${escapeHtml(t.advice)}</p>`;
+        if (t.lucky) {
+          const li = t.lucky;
+          html += `<div class="zen-lucky">
+            <span>Màu may mắn: <b style="color:${li.color}">${li.uni}</b></span>
+            <span>Hướng: <b>${li.dir}</b></span>
+            <span>Số: <b>${li.num}</b></span>
+            <span>Vật: <b>${li.item}</b></span>
+          </div>`;
+        }
+      } else if (tab === 'hours') {
+        const h = F.auspiciousHours();
+        html += `<h4>🕐 Giờ đẹp hôm nay — ngày ${h.dayLabel}</h4>`;
+        html += `<p style="color:var(--muted-gold);font-size:12.5px;margin-bottom:8px">Chấm theo sinh/khắc/hợp/xung ngũ hành giữa giờ canh và ngày — giờ điểm cao càng tốt.</p>`;
+        h.good.forEach((g) => {
+          const cls = g.score >= 4 ? 'good' : g.score >= 2 ? 'mid' : 'bad';
+          html += `<div class="zen-day-row">
+            <span class="d-can">${g.name} <small style="color:var(--muted-gold)">${g.label}</small></span>
+            <span class="zen-pill ${cls}">${g.score >= 4 ? 'Đại cát' : g.score >= 2 ? 'Bình hòa' : 'Tránh'}</span>
+            <span class="d-why">${escapeHtml(g.why || 'trung tính')}</span>
+          </div>`;
+        });
+      } else if (tab === 'days') {
+        const days = F.goodDays(birth, 30);
+        html += `<h4>📅 Ngày đẹp 30 ngày tới${birth ? '' : ' (chưa có lá số — xếp theo can-chi đồng hành)'}</h4>`;
+        days.forEach((d) => {
+          const cls = d.score >= 8 ? 'good' : d.score >= 5 ? 'mid' : 'bad';
+          const dow = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][d.date.getDay()];
+          html += `<div class="zen-day-row">
+            <span class="d-date">${dow} ${String(d.date.getDate()).padStart(2, '0')}/${String(d.date.getMonth() + 1).padStart(2, '0')}</span>
+            <span class="d-can">${d.label}</span>
+            <span class="zen-pill ${cls}">${d.score}/10</span>
+            <span class="d-why">${escapeHtml(d.why)}</span>
+          </div>`;
+        });
+      } else { // chart
+        if (!birth) {
+          html = `<h4>📜 Lá số tứ trụ</h4><p style="color:var(--muted-gold)">Nhập năm sinh dương lịch ở trên rồi bấm "Lập lá số".</p>`;
+        } else {
+          const ls = F.laSo(birth);
+          html += `<h4>📜 Lá số — ${ls.conGiap} (${ls.tuoi} ${ls.tuoiEl})</h4>`;
+          html += `<div class="zen-chart-grid">
+            <div class="zen-chart-cell"><div class="cz-label">Năm</div><div class="cz-val">${ls.nam.label}</div></div>
+            <div class="zen-chart-cell"><div class="cz-label">Tháng</div><div class="cz-val">${ls.thang.label}</div></div>
+            <div class="zen-chart-cell"><div class="cz-label">Ngày</div><div class="cz-val">${ls.ngay.label}</div></div>
+          </div>`;
+          html += `<p>Mệnh hành: <b style="color:${F.EL_INFO[ls.menh].color}">${ls.menh}</b> — sinh năm ${ls.nam.label}, tuổi ${ls.conGiap}.</p>`;
+          const li = F.EL_INFO[ls.menh];
+          html += `<div class="zen-lucky">
+            <span>Màu: <b style="color:${li.color}">${li.uni}</b></span>
+            <span>Hướng: <b>${li.dir}</b></span>
+            <span>Số: <b>${li.num}</b></span>
+            <span>Vật: <b>${li.item}</b></span>
+          </div>`;
+        }
+      }
+      html += `<div class="zen-note">* Can-chi tính theo lịch thật; nội dung chỉ mang tính tham khảo tu tập, không thay thế nhân quả.</div>`;
+      zenBody.innerHTML = html;
+    }
+
+    bind('btnZenOpen', () => {
+      const birth = getBirth();
+      if (zenBirth) zenBirth.value = birth;
+      zenModal.classList.add('visible');
+      renderZen(zenTab);
+    });
+    bind('btnZenClose', () => zenModal.classList.remove('visible'));
+    zenModal?.addEventListener('click', (e) => { if (e.target === zenModal) zenModal.classList.remove('visible'); });
+    bind('btnZenSave', saveBirth);
+    document.querySelectorAll('.zen-tab').forEach((b) => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('.zen-tab').forEach((x) => x.classList.remove('active'));
+        b.classList.add('active');
+        zenTab = b.dataset.zt;
+        renderZen(zenTab);
+      });
+    });
+    if (zenBirth) zenBirth.addEventListener('change', saveBirth);
+  })();
 })();

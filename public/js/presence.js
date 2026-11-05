@@ -878,17 +878,8 @@ const FirebaseNet = function () {
       duyenReqsRef = db.ref('temple/duyenReq/' + sid);
       bondsRef = db.ref('temple/bonds');
 
-      // Bump version từ xa: temple/appVersion > bản đang chạy → giữ chiếu + reload lấy code mới
-      db.ref('temple/appVersion').on('value', (snap) => {
-        const want = snap.val() | 0;
-        if (want > APP_VERSION && sessionStorage.getItem('chua_vt_seenver') !== String(want)) {
-          try {
-            sessionStorage.setItem('chua_vt_seenver', String(want));
-            sessionStorage.setItem('chua_vt_keepseat', '1');
-          } catch (_) { }
-          location.reload();
-        }
-      });
+      // KHÔNG tự reload khi có bản mới — người đang treo không bị đẩy ra.
+      // Ai F5/load lại tự nhiên sẽ nhận code mới, còn lại dùng bản cũ tới khi tự reload.
       db.ref('.info/connected').on('value', (snap) => {
         if (snap.val() === true && !dead) {
           up = true;
