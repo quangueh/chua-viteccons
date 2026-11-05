@@ -312,6 +312,184 @@ import { makeDevotee } from './chars3d.js';
       paperLanterns.push({ g: lg, phase: z * 1.3 + sx });
     }
   }
+  // 2 đèn lồng lớn treo giữa lối đi
+  for (const z of [-5, -11]) {
+    const big = new THREE.Group();
+    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.6, 4), woodDark);
+    cord.position.y = 0.8;
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 12), lanternPaper.clone());
+    body.scale.y = 1.25;
+    const capT = new THREE.Mesh(new THREE.ConeGeometry(0.34, 0.26, 10), woodRed);
+    capT.position.y = 0.85;
+    const capB = capT.clone(); capB.position.y = -0.85; capB.rotation.x = Math.PI;
+    const tassel = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 0.5, 6),
+      new THREE.MeshStandardMaterial({ color: 0xc01828, roughness: 0.8 }));
+    tassel.position.y = -1.15;
+    big.add(cord, body, capT, capB, tassel);
+    big.position.set(0, 6.3, z);
+    scene.add(big);
+    paperLanterns.push({ g: big, phase: z });
+  }
+
+  // ============================================================
+  // BÀN THỜ PHỤ hai bên + mâm quả + bình hoa + nến
+  // ============================================================
+  const sideAltarSmoke = [];
+  const altarWood = new THREE.MeshStandardMaterial({ color: 0x3d1e0e, roughness: 0.6 });
+  const altarBronze = new THREE.MeshStandardMaterial({ color: 0x8a5a22, roughness: 0.45, metalness: 0.7 });
+  const porcelain = new THREE.MeshStandardMaterial({ color: 0xf0e6d2, roughness: 0.35 });
+  const fruitMat = new THREE.MeshStandardMaterial({ color: 0xe08a20, roughness: 0.55 });
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e5a1e, roughness: 0.8 });
+  for (const sx of [-1, 1]) {
+    const alt = new THREE.Group();
+    // thân bàn + mặt bàn
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.85, 0.9), altarWood);
+    body.position.y = 0.55;
+    const top = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.1, 1.05),
+      new THREE.MeshStandardMaterial({ color: 0x5a2c12, roughness: 0.45 }));
+    top.position.y = 1.03;
+    alt.add(body, top);
+    // chân bàn hơi ló ra
+    for (const lx of [-0.85, 0.85]) for (const lz of [-0.32, 0.32]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.5, 0.12), altarWood);
+      leg.position.set(lx, 0.25, lz);
+      alt.add(leg);
+    }
+    // mâm đồng 5 quả
+    const tray = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.34, 0.07, 18), altarBronze);
+    tray.position.set(-0.45, 1.13, 0.05);
+    alt.add(tray);
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      const f = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), fruitMat);
+      f.position.set(-0.45 + Math.cos(a) * 0.2, 1.24, 0.05 + Math.sin(a) * 0.14);
+      f.scale.y = 0.85;
+      alt.add(f);
+    }
+    // bình hoa sứ + cành lá
+    const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.15, 0.42, 12), porcelain);
+    vase.position.set(0.55, 1.3, 0);
+    alt.add(vase);
+    for (let i = 0; i < 3; i++) {
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.55, 5), leafMat);
+      stem.position.set(0.55 + (i - 1) * 0.09, 1.65, (i - 1) * 0.05);
+      stem.rotation.z = (i - 1) * 0.22;
+      alt.add(stem);
+      const bloom = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6),
+        new THREE.MeshStandardMaterial({ color: i === 1 ? 0xe03040 : 0xf0d040, roughness: 0.6 }));
+      bloom.position.set(0.55 + (i - 1) * 0.17, 1.95, (i - 1) * 0.11);
+      alt.add(bloom);
+    }
+    // 2 nến nhỏ
+    for (const cx of [0.1, 0.95]) {
+      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.3, 8),
+        new THREE.MeshStandardMaterial({ color: 0xf5eeda, roughness: 0.7 }));
+      stick.position.set(cx, 1.25, -0.15);
+      const flame = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6),
+        new THREE.MeshBasicMaterial({ color: 0xffc860 }));
+      flame.position.set(cx, 1.45, -0.15);
+      alt.add(stick, flame);
+    }
+    // lư hương nhỏ trên bàn
+    const miniPot = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.09, 0.12, 10), altarBronze);
+    miniPot.position.set(-0.1, 1.15, -0.2);
+    alt.add(miniPot);
+    alt.position.set(sx * 6.6, 0, -11.2);
+    alt.rotation.y = sx * -0.18;
+    scene.add(alt);
+    // khói phụ từ lư hương bàn — push sau khi emitters được khai báo
+    sideAltarSmoke.push(new THREE.Vector3(sx * 6.5, 1.3, -11.35));
+  }
+
+  // ============================================================
+  // ĐÈN ĐÁ (toro) hai bên lối đi + chậu cây cảnh
+  // ============================================================
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x6a6258, roughness: 0.95 });
+  const stoneGlow = new THREE.MeshStandardMaterial({
+    color: 0xffd890, emissive: 0xff9a40, emissiveIntensity: 0.55, roughness: 0.8
+  });
+  for (const sx of [-1, 1]) {
+    for (const z of [-4.5, -10.5, -14.5]) {
+      const toro = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.38, 0.25, 6), stoneMat);
+      base.position.y = 0.12;
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.85, 6), stoneMat);
+      shaft.position.y = 0.68;
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.36, 0.42), stoneMat);
+      box.position.y = 1.28;
+      // cửa sổ lửa phát sáng 4 mặt
+      for (let f = 0; f < 4; f++) {
+        const win = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.2), stoneGlow);
+        const a = (f / 4) * Math.PI * 2;
+        win.position.set(Math.sin(a) * 0.215, 1.28, Math.cos(a) * 0.215);
+        win.rotation.y = a;
+        toro.add(win);
+      }
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.3, 4), stoneMat);
+      roof.position.y = 1.62;
+      roof.rotation.y = Math.PI / 4;
+      const jewel = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), stoneMat);
+      jewel.position.y = 1.85;
+      toro.add(base, shaft, box, roof, jewel);
+      toro.position.set(sx * 2.5, 0, z);
+      scene.add(toro);
+    }
+    // chậu cây cảnh dọc tường
+    for (const z of [-3, -7.5, -12, -16.5]) {
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.3, 0.5, 10),
+        new THREE.MeshStandardMaterial({ color: 0x7a4020, roughness: 0.8 }));
+      pot.position.set(sx * 9.2, 0.25, z);
+      scene.add(pot);
+      // tán cây: 3 khối cầu lệch nhau
+      const greens = [0x2e5a1e, 0x3a6e26, 0x27511a];
+      for (let i = 0; i < 3; i++) {
+        const blob = new THREE.Mesh(new THREE.SphereGeometry(0.5 - i * 0.1, 10, 8),
+          new THREE.MeshStandardMaterial({ color: greens[i], roughness: 0.9 }));
+        blob.position.set(sx * 9.2 + (i - 1) * 0.25 * sx, 0.95 + i * 0.38, z + (i % 2) * 0.2);
+        blob.scale.y = 0.8;
+        scene.add(blob);
+      }
+      // thân cây
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 0.9, 6),
+        new THREE.MeshStandardMaterial({ color: 0x4a2c14, roughness: 0.9 }));
+      trunk.position.set(sx * 9.2, 0.85, z);
+      scene.add(trunk);
+    }
+  }
+
+  // ============================================================
+  // BẬC THỀM + CUỐN THƯ treo cột (decor không chữ — vải màu + viền)
+  // ============================================================
+  for (let s = 0; s < 3; s++) {
+    const step = new THREE.Mesh(
+      new THREE.BoxGeometry(7 - s * 0.8, 0.14, 0.5),
+      new THREE.MeshStandardMaterial({ color: 0x8a8078, roughness: 0.9 })
+    );
+    step.position.set(0, 0.07 + s * 0.14, -9.7 - s * 0.45);
+    scene.add(step);
+  }
+  // cuốn thư đỏ treo trên cột — xen kẽ vàng
+  const scrollColors = [0xa01820, 0xc89828];
+  let sci = 0;
+  for (const sx of [-1, 1]) {
+    for (const z of [-1.5, -5.5, -9.5, -13.5, -17.5]) {
+      const sc2 = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.5, 2.2),
+        new THREE.MeshStandardMaterial({
+          color: scrollColors[sci % 2], roughness: 0.85, side: THREE.DoubleSide,
+          emissive: scrollColors[sci % 2], emissiveIntensity: 0.08
+        })
+      );
+      sc2.position.set(sx * 8.25, 5.4, z);
+      sc2.rotation.y = sx * Math.PI / 2;
+      scene.add(sc2);
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.62, 6), woodDark);
+      rod.rotation.z = Math.PI / 2;
+      rod.position.set(sx * 8.25, 6.55, z);
+      scene.add(rod);
+      sci++;
+    }
+  }
 
   // ============================================================
   // LƯ HƯƠNG ĐỒNG + NHANH + KHÓI
@@ -390,6 +568,7 @@ import { makeDevotee } from './chars3d.js';
     return pts;
   }
   const emitters = [makeSmokeEmitter(new THREE.Vector3(0, 0.85, -8.3), 70, 0.35)];
+  for (const p of sideAltarSmoke) emitters.push(makeSmokeEmitter(p, 22, 0.1));
 
   // bụi vàng lơ lửng trong không gian chùa
   function makeDust() {
@@ -924,7 +1103,25 @@ import { makeDevotee } from './chars3d.js';
 
   const ritualActors = new Set(); // mỗi người chỉ hành lễ 1 lần — tránh nhân đôi nhân vật
 
-  function walkAndBow(user, actionLabel, wish, seatIdx) {
+  // Tìm đúng chiếu của người hành lễ: ưu tiên khớp sid/tên occupant,
+  // fallback seatIdx từ event — tránh 1 người vừa ngồi vừa đứng dậy lạy
+  function findRitualSeat(user, sid, seatIdx) {
+    const uname = String(user || '').toLowerCase();
+    for (let i = 0; i < TOTAL_SEATS; i++) {
+      const o = seatChars[i].occupant;
+      if (!o) continue;
+      if ((sid && (o.uniqueId === sid || o.sid === sid)) ||
+        (uname && String(o.name || '').toLowerCase() === uname)) return i;
+    }
+    if (Number.isInteger(seatIdx) && seatIdx >= 0 && seatIdx < TOTAL_SEATS) {
+      const o = seatChars[seatIdx].occupant;
+      if (!o || !uname || String(o.name || '').toLowerCase() === uname ||
+        (sid && (o.uniqueId === sid || o.sid === sid))) return seatIdx;
+    }
+    return -1;
+  }
+
+  function walkAndBow(user, actionLabel, wish, seatIdx, sid) {
     const hudName = document.getElementById('devoteeNameLine');
     const hudAct = document.getElementById('devoteeActionTag');
     if (hudName) hudName.textContent = user || 'Thí Chủ';
@@ -932,16 +1129,17 @@ import { makeDevotee } from './chars3d.js';
     incenseGlow.intensity = 2.6;
     if (window.gsap) gsap.to(incenseGlow, { intensity: 1.4, duration: 3 });
 
-    const key = String(user || '').toLowerCase();
+    const key = String(sid || user || '').toLowerCase();
     if (ritualActors.has(key)) return; // người này đang hành lễ rồi
     ritualActors.add(key);
 
     const G = window.gsap;
-    const sc = (seatIdx >= 0 && seatIdx < TOTAL_SEATS) ? seatChars[seatIdx] : null;
-    const seat = sc ? SEATS[seatIdx] : null;
+    const seatNum = findRitualSeat(user, sid, seatIdx);
+    const sc = seatNum >= 0 ? seatChars[seatNum] : null;
+    const seat = sc ? SEATS[seatNum] : null;
 
-    // Người có ghế: ẩn nhân vật ngồi → đứng dậy đi lên lư hương
-    if (sc && (sc.status === 'seated' || sc.status === 'walking_in')) {
+    // Có chiếu (kể cả đang đi vào/chưa kịp ngồi): chiếm quyền ghế → ẩn mọi hình tại chiếu
+    if (sc) {
       sc.status = 'ritual';
       if (sc.devotee) sc.devotee.group.visible = false;
       if (sc.labelEl) sc.labelEl.style.display = 'none';
@@ -970,6 +1168,11 @@ import { makeDevotee } from './chars3d.js';
             releaseTraveler(t);
             ritualActors.delete(key);
             if (!sc.devotee) {
+              if (!sc.occupant) {
+                // ghế thật sự trống (seatIdx cũ) → trả về empty, không tạo người ngồi ma
+                sc.status = 'empty';
+                return;
+              }
               // chưa kịp ngồi (đang walking_in) → tạo nhân vật ngồi luôn
               const dev = makeDevotee({ sitting: true });
               dev.group.position.set(seat.x, 0, seat.z);
@@ -1170,7 +1373,7 @@ import { makeDevotee } from './chars3d.js';
       case 'burnIncense':
         audio.playIncenseChime();
         meritPopup(`+${ev.merit} Công Đức`, BURNER_POS.clone().add(new THREE.Vector3(0, 0.8, 0)), '#ffe082');
-        walkAndBow(ev.user, `🔥 Dâng ${ev.count} nén hương (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx);
+        walkAndBow(ev.user, `🔥 Dâng ${ev.count} nén hương (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx, ev.uniqueId);
         break;
       case 'strikeWoodenFish':
         audio.playWoodenFish();
@@ -1183,19 +1386,19 @@ import { makeDevotee } from './chars3d.js';
         pulseHallBowing();
         spawnBellWave();
         meritPopup(`+${ev.merit} Công Đức`, new THREE.Vector3(-5.4, 2.6, -8.6), '#fff3b0');
-        walkAndBow(ev.user, `🔔 Thỉnh Đại Hồng Chung (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx);
+        walkAndBow(ev.user, `🔔 Thỉnh Đại Hồng Chung (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx, ev.uniqueId);
         break;
       case 'sendPrayer':
         audio.playIncenseChime();
         spawnLantern(ev.user, ev.wish);
         meritPopup(`+${ev.merit} Công Đức`, BURNER_POS, '#ffb74d');
-        walkAndBow(ev.user, `🏮 Cầu phúc (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx);
+        walkAndBow(ev.user, `🏮 Cầu phúc (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx, ev.uniqueId);
         break;
       case 'offerGift':
         audio.playIncenseChime();
         audio.playTempleBell(0.85);
         meritPopup(`+${ev.merit} Công Đức`, BURNER_POS.clone().add(new THREE.Vector3(0, 0.9, 0)), '#fff3b0');
-        walkAndBow(ev.user, `🪷 Dâng ${ev.giftName} (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx);
+        walkAndBow(ev.user, `🪷 Dâng ${ev.giftName} (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx, ev.uniqueId);
         break;
       case 'grandCeremony':
         audio.playTempleBell(1.2);
@@ -1203,7 +1406,7 @@ import { makeDevotee } from './chars3d.js';
         spawnPetalRain(5);
         pulseHallBowing();
         showGrandCeremonyBanner(ev.user, ev.giftName, ev.merit);
-        walkAndBow(ev.user, `🐉 ${ev.giftName} (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx);
+        walkAndBow(ev.user, `🐉 ${ev.giftName} (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx, ev.uniqueId);
         break;
       case 'drawFortune':
         audio.playFortuneShake();
@@ -1211,7 +1414,7 @@ import { makeDevotee } from './chars3d.js';
           // nghi thức của người khác — không có TTS, hiển thị trực tiếp
           audio.playIncenseChime();
           showFortuneModal(ev.user, ev.fortune);
-          walkAndBow(ev.user, `🎋 Quẻ số ${ev.fortune?.number || '?'} (${ev.fortune?.rank || 'Linh Xăm'})`, '', ev.seatIdx);
+          walkAndBow(ev.user, `🎋 Quẻ số ${ev.fortune?.number || '?'} (${ev.fortune?.rank || 'Linh Xăm'})`, '', ev.seatIdx, ev.uniqueId);
           clearTimeout(fortuneTimer);
           fortuneTimer = setTimeout(() => document.getElementById('fortuneModal')?.classList.remove('visible'), 6000);
           break;
@@ -1221,7 +1424,7 @@ import { makeDevotee } from './chars3d.js';
           onStart: () => {
             audio.playIncenseChime();
             showFortuneModal(ev.user, ev.fortune);
-            walkAndBow(ev.user, `🎋 Quẻ số ${ev.fortune?.number} (${ev.fortune?.rank})`, ev.fortune?.meaning || '', ev.seatIdx);
+            walkAndBow(ev.user, `🎋 Quẻ số ${ev.fortune?.number} (${ev.fortune?.rank})`, ev.fortune?.meaning || '', ev.seatIdx, ev.uniqueId);
           },
           onEnd: () => {
             clearTimeout(fortuneTimer);
