@@ -13,7 +13,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Noto+Serif:wght@700;900&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="/css/live.css?v=20" />
+  <link rel="stylesheet" href="/css/live.css?v=21" />
   <script>
     // Cổng pháp danh: chưa ghi danh → chặn vào chùa (chạy đồng bộ, không flash cho người đã ghi danh)
     try {
@@ -232,7 +232,9 @@
       <div class="chat-head" id="chatHead">
         <span class="chat-title">💬 Trò Chuyện</span>
         <div class="chat-tabs">
-          <button class="chat-tab active" id="tabChatPublic">Chung</button>
+          <button class="chat-tab active" id="tabChatPublic">Chung
+            <span class="chat-badge" id="publicTabBadge" hidden>0</span>
+          </button>
           <button class="chat-tab" id="tabChatDm">Riêng
             <span class="chat-badge" id="dmBadge" hidden>0</span>
           </button>
@@ -300,12 +302,12 @@
   <script src="/vendor/gsap.min.js"></script>
   <script src="/js/vendor/firebase-app-compat.js"></script>
   <script src="/js/vendor/firebase-database-compat.js"></script>
-  <script src="/js/firebase-config.js?v=20"></script>
+  <script src="/js/firebase-config.js?v=21"></script>
   <script src="/js/vendor/mqtt.min.js"></script>
-  <script src="/js/presence.js?v=20"></script>
-  <script src="/js/standalone.js?v=20"></script>
-  <script src="/js/audio.js?v=20"></script>
-  <script type="module" src="/js/app3d.js?v=20"></script>
+  <script src="/js/presence.js?v=21"></script>
+  <script src="/js/standalone.js?v=21"></script>
+  <script src="/js/audio.js?v=21"></script>
+  <script type="module" src="/js/app3d.js?v=21"></script>
 </body>
 
 </html>

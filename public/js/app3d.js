@@ -1642,10 +1642,12 @@ import { makeDevotee } from './chars3d.js';
   const chatMsgs = document.getElementById('chatMsgs');
   const chatInput = document.getElementById('chatInput');
   const chatBadge = document.getElementById('chatBadge');
-  let chatUnread = 0;
+  const publicTabBadge = document.getElementById('publicTabBadge');
+  let publicUnread = 0;
   let lastChatSend = 0;
   const chatLoadTs = Date.now(); // tin cũ hơn mốc này là lịch sử — render nhưng không đếm unread
   let chatEmptyEl = chatMsgs?.querySelector('.chat-empty') || null;
+  const fmtBadge = (n) => (n > 99 ? '99+' : String(n));
 
   const chatNameColor = (uid) => {
     let h = 0;
@@ -1656,11 +1658,30 @@ import { makeDevotee } from './chars3d.js';
     if (!chatMsgs) return true;
     return chatMsgs.scrollHeight - chatMsgs.scrollTop - chatMsgs.clientHeight < 60;
   };
+  // Badge thống nhất: collapsed → đầu panel = tổng; đang mở → badge theo tab
+  // chưa xem + đầu panel báo tin dưới fold của tab đang xem
+  const refreshBadges = () => {
+    const collapsed = !!chatPanel?.classList.contains('collapsed');
+    const viewingPublic = !collapsed && !dmTab;
+    const viewingDm = !collapsed && dmTab;
+    const total = publicUnread + dmUnread;
+    if (chatBadge) {
+      const n = collapsed ? total : (viewingPublic ? publicUnread : 0);
+      chatBadge.textContent = fmtBadge(n);
+      chatBadge.hidden = n === 0;
+    }
+    if (publicTabBadge) {
+      publicTabBadge.textContent = fmtBadge(publicUnread);
+      publicTabBadge.hidden = !(publicUnread > 0 && viewingDm);
+    }
+    if (dmBadge) {
+      dmBadge.textContent = fmtBadge(dmUnread);
+      dmBadge.hidden = !(dmUnread > 0 && viewingPublic);
+    }
+  };
   const bumpUnread = () => {
-    if (!chatPanel?.classList.contains('collapsed') || !chatBadge) return;
-    chatUnread++;
-    chatBadge.textContent = String(chatUnread);
-    chatBadge.hidden = false;
+    publicUnread++;
+    refreshBadges();
   };
   const appendChat = (m) => {
     if (!chatMsgs) return;
@@ -1712,11 +1733,13 @@ import { makeDevotee } from './chars3d.js';
   chatInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMsg(); });
   const toggleChat = () => {
     chatPanel?.classList.toggle('collapsed');
-    if (!chatPanel?.classList.contains('collapsed') && chatBadge) {
-      chatUnread = 0;
-      chatBadge.hidden = true;
+    if (!chatPanel?.classList.contains('collapsed')) {
+      // mở panel → xóa unread của tab đang xem, tab kia giữ badge
+      if (dmTab) dmUnread = 0; else publicUnread = 0;
+      refreshBadges();
       if (chatMsgs) chatMsgs.scrollTop = chatMsgs.scrollHeight;
-    }
+      if (dmMsgs) dmMsgs.scrollTop = dmMsgs.scrollHeight;
+    } else refreshBadges();
   };
   bind('btnChatToggle', toggleChat);
   document.getElementById('chatHead')?.addEventListener('click', (e) => {
@@ -1749,7 +1772,7 @@ import { makeDevotee } from './chars3d.js';
 
   const bumpDmUnread = () => {
     dmUnread++;
-    if (dmBadge) { dmBadge.textContent = String(dmUnread); dmBadge.hidden = false; }
+    refreshBadges();
   };
   const appendDm = (m) => {
     if (!dmMsgs) return;
@@ -1778,10 +1801,13 @@ import { makeDevotee } from './chars3d.js';
       : 'Nhắn gì đó...';
     if (dm) {
       dmUnread = 0;
-      if (dmBadge) dmBadge.hidden = true;
       renderDmEmpty();
       if (dmMsgs) dmMsgs.scrollTop = dmMsgs.scrollHeight;
+    } else {
+      publicUnread = 0;
+      if (chatMsgs) chatMsgs.scrollTop = chatMsgs.scrollHeight;
     }
+    refreshBadges();
   };
   const renderDmEmpty = () => {
     if (!dmMsgs) return;
