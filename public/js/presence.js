@@ -11,6 +11,12 @@
  * Mất kết nối → chạy một mình như cũ.
  */
 // ── bảo vệ chung cho cả 2 engine (mesh + firebase) ─────────────────────────
+// Pháp danh: localStorage là nguồn chính (sống qua F5/webview dọn session), đọc cả hai.
+function vtReadName() {
+  try {
+    return sessionStorage.getItem('chua_vt_name') || localStorage.getItem('chua_vt_name') || '';
+  } catch (_) { return ''; }
+}
 const _ritAnimAt = new Map(); // sid -> ts animate gần nhất — chặn storm từ client spam
 function ritAnimOk(rsid) {
   const last = _ritAnimAt.get(rsid) || 0;
@@ -440,7 +446,7 @@ const MeshNet = function () {
     const queue = [];
     const people = [];
     const all = new Map(peers);
-    all.set(sid, { ...me, lastSeen: t }); // luôn đếm cả mình (kể cả khách chưa ghi danh)
+    if (me.name) all.set(sid, { ...me, lastSeen: t }); // chỉ đếm mình khi đã ghi danh — khách vô danh không xuất hiện
 
     // gom các sid đang sống theo chiếu họ claim
     const claimers = new Map(); // seat -> [{sid,name,claimTs}]
@@ -546,7 +552,7 @@ const MeshNet = function () {
     if (started) return;
     started = true;
     // khôi phục pháp danh theo phiên tab (reload giữ, đóng tab mất)
-    me.name = sessionStorage.getItem('chua_vt_name') || '';
+    me.name = vtReadName();
     // snapshot: tin nhắn cache gần đây → thấy ngay ai đang trong chùa
     fetch(`${BASE}/${TOPIC}/json?poll=1&since=45s`)
       .then((r) => r.text())
@@ -664,8 +670,11 @@ const FirebaseNet = function () {
       people.push({ sid: k, name: p.name || '', merit: p.merit || 0, seat: p.seat, enqTs: p.enqTs });
       if (p.enqTs && !(Number.isInteger(p.seat) && p.seat >= 0)) queue.push({ sid: k, name: p.name, enqTs: p.enqTs });
     }
-    people.push({ sid, name: me.name || '', merit: me.merit, seat: me.seat, enqTs: me.enqTs });
-    if (me.enqTs && me.seat < 0) queue.push({ sid, name: me.name, enqTs: me.enqTs });
+    // chỉ đếm mình khi đã ghi danh — khách chưa có pháp danh không xuất hiện trong đạo tràng
+    if (me.name) {
+      people.push({ sid, name: me.name, merit: me.merit, seat: me.seat, enqTs: me.enqTs });
+      if (me.enqTs && me.seat < 0) queue.push({ sid, name: me.name, enqTs: me.enqTs });
+    }
     for (const [k, v] of Object.entries(seatMap || {})) {
       const i = +k;
       if (i >= 0 && i < TOTAL_SEATS && v && v.sid) {
@@ -845,7 +854,7 @@ const FirebaseNet = function () {
   function start() {
     if (started) return;
     started = true;
-    me.name = sessionStorage.getItem('chua_vt_name') || '';
+    me.name = vtReadName();
     const cfg = window.FIREBASE_CONFIG;
     try {
       if (!cfg || !cfg.databaseURL || !window.firebase) { dead = true; return; }

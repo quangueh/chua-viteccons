@@ -13,6 +13,20 @@ import { makeDevotee } from './chars3d.js';
   const labelsLayer = document.getElementById('labelsLayer');
   if (!canvas || !wrapper) return;
 
+  // Pháp danh: localStorage = nguồn chính (sống qua F5/đóng mở/in-app webview),
+  // sessionStorage giữ tương thích bản cũ — đọc cả hai, ghi cả hai.
+  function vtName() {
+    try {
+      return sessionStorage.getItem('chua_vt_name') || localStorage.getItem('chua_vt_name') || '';
+    } catch (_) { return ''; }
+  }
+  function vtSaveName(n) {
+    const v = String(n || '').slice(0, 40);
+    if (!v) return;
+    try { sessionStorage.setItem('chua_vt_name', v); } catch (_) { }
+    try { localStorage.setItem('chua_vt_name', v); } catch (_) { }
+  }
+
   // ============================================================
   // RENDERER / SCENE / CAMERA
   // ============================================================
@@ -638,12 +652,12 @@ import { makeDevotee } from './chars3d.js';
   // Người dùng hiện tại — định danh = session id trên kênh chung
   function myUniqueId() {
     if (window.TempleNet) return window.TempleNet.sid;
-    const n = sessionStorage.getItem('chua_vt_name') || '';
+    const n = vtName() || '';
     return n.toLowerCase().replace(/\s+/g, '');
   }
   function isMe(occ) {
     if (!occ) return false;
-    const saved = sessionStorage.getItem('chua_vt_name') || '';
+    const saved = vtName() || '';
     return (occ.uniqueId && occ.uniqueId === myUniqueId()) || (saved && occ.name === saved && !occ.uniqueId);
   }
 
@@ -1132,23 +1146,26 @@ import { makeDevotee } from './chars3d.js';
   }
 
   function getFormInput() {
-    const savedName = sessionStorage.getItem('chua_vt_name') || '';
+    const savedName = vtName() || '';
     const savedWish = localStorage.getItem('chua_vt_wish') || '';
     const nameEl = document.getElementById('inputDevoteeName');
     const wishEl = document.getElementById('inputDevoteeWish');
     if (nameEl && savedName && !nameEl.value.trim()) nameEl.value = savedName;
     if (wishEl && savedWish && !wishEl.value.trim()) wishEl.value = savedWish;
-    const user = nameEl?.value.trim() || 'Thí Chủ Viteccons';
+    const user = nameEl?.value.trim() || savedName;
     const wish = wishEl?.value.trim() || 'Cầu cho gia đình bình an, công trình thuận lợi';
-    try {
-      sessionStorage.setItem('chua_vt_name', user);
-      localStorage.setItem('chua_vt_wish', wish);
-    } catch (_) { }
+    try { localStorage.setItem('chua_vt_wish', wish); } catch (_) { }
     return { user, wish };
   }
 
   async function callRpc(method, params = {}) {
     audio.ensureContext();
+    // nghi lễ/tác vụ có danh tính → bắt buộc pháp danh thật, không cấp tên mặc định
+    if ('user' in params && !params.user) {
+      toast('Người muốn làm lễ phải ghi danh pháp danh trước đã 🙏');
+      document.documentElement.classList.add('need-name');
+      return { error: 'noname' };
+    }
     const res = window.TempleLocal?.handleRpc(method, params);
     if (res?.error === 'cooldown') toast('Từ từ thôi đạo hữu 🙏 thành tâm không cần vội');
     if (res?.state) updateUIState(res.state);
@@ -1165,7 +1182,7 @@ import { makeDevotee } from './chars3d.js';
     if (!el) return;
     const state = st || window.TempleLocal?.getState();
     if (!state) return;
-    const saved = sessionStorage.getItem('chua_vt_name');
+    const saved = vtName();
     if (!saved) { el.textContent = 'Chưa ghi danh — để lại pháp danh để chọn chiếu'; return; }
     const uid = myUniqueId();
     const mine = (state.seats || []).find((s) => s && (s.uniqueId === uid || s.name === saved));
@@ -1223,9 +1240,9 @@ import { makeDevotee } from './chars3d.js';
 
   async function pickSeat(idx) {
     const nameEl = document.getElementById('inputDevoteeName');
-    const user = (nameEl?.value.trim()) || sessionStorage.getItem('chua_vt_name') || '';
+    const user = (nameEl?.value.trim()) || vtName() || '';
     if (!user) { toast('Hãy để lại pháp danh trước đã 🙏'); return; }
-    try { sessionStorage.setItem('chua_vt_name', user); } catch (_) { }
+    try { vtSaveName(user); } catch (_) { }
     const res = await callRpc('temple.pickSeat', { user, seatIdx: idx });
     if (res?.error === 'occupied') {
       toast('Chiếu này vừa có người ngồi — chọn chỗ khác');
@@ -1237,7 +1254,7 @@ import { makeDevotee } from './chars3d.js';
   }
 
   async function registerFlow(user) {
-    try { sessionStorage.setItem('chua_vt_name', user); } catch (_) { }
+    try { vtSaveName(user); } catch (_) { }
     const res = await callRpc('temple.register', { user });
     refreshSeatStatus(res?.state);
     if (res?.seatIdx !== undefined) {
@@ -1278,7 +1295,7 @@ import { makeDevotee } from './chars3d.js';
 
   // Thoát/đóng web → nhả ghế ngay, vào lại phải xếp hàng/chọn lại
   function releaseMySeat() {
-    const saved = sessionStorage.getItem('chua_vt_name');
+    const saved = vtName();
     if (!saved || !window.TempleLocal) return;
     window.TempleLocal.handleRpc('temple.leaveSeat', { user: saved });
   }
@@ -1378,14 +1395,14 @@ import { makeDevotee } from './chars3d.js';
       const bond = window.TempleNet.bond || null;
       if (!bond) return;
       window.TempleNet.sendDm(text);
-      if (typeof appendDm === 'function') appendDm({ user: sessionStorage.getItem('chua_vt_name') || 'Bạn', uniqueId: window.TempleNet.sid, text, ts: t });
+      if (typeof appendDm === 'function') appendDm({ user: vtName() || 'Bạn', uniqueId: window.TempleNet.sid, text, ts: t });
       chatInput.value = '';
       return;
     }
     recentOwn.push(text);
     if (recentOwn.length > 10) recentOwn.shift();
     window.TempleNet.sendChat(text);
-    appendChat({ user: sessionStorage.getItem('chua_vt_name') || 'Bạn', uniqueId: window.TempleNet.sid, text, ts: t });
+    appendChat({ user: vtName() || 'Bạn', uniqueId: window.TempleNet.sid, text, ts: t });
     chatInput.value = '';
   };
   if (window.TempleNet) window.TempleNet.onChat = (m) => {
@@ -1531,7 +1548,7 @@ import { makeDevotee } from './chars3d.js';
     }
   };
   const openDuyen = () => {
-    if (!sessionStorage.getItem('chua_vt_name')) { toast('Ghi danh pháp danh trước đã đạo hữu 🙏'); return; }
+    if (!vtName()) { toast('Ghi danh pháp danh trước đã đạo hữu 🙏'); return; }
     renderDuyenModal();
     if (duyenModal) duyenModal.hidden = false;
   };
@@ -1580,7 +1597,7 @@ import { makeDevotee } from './chars3d.js';
   if (document.documentElement.classList.contains('need-name')) setTimeout(() => gateInput?.focus(), 350);
   // canh chừng: giữa session mà mất pháp danh (storage bị xóa, tab để mở từ bản cũ) → cổng hiện lại
   setInterval(() => {
-    if (!sessionStorage.getItem('chua_vt_name')) {
+    if (!vtName()) {
       document.documentElement.classList.add('need-name');
     }
   }, 4000);
