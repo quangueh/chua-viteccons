@@ -794,6 +794,17 @@ const FirebaseNet = function () {
         bondsRef.child(pairKeyOf(sid, fromSid)).set({
           a: sid, b: fromSid, an: me.name, ts: firebase.database.ServerValue.TIMESTAMP
         });
+        // phát sự kiện công khai → TẤT CẢ mọi người trong chùa cùng chúc mừng
+        try {
+          const partnerName = peers.get(fromSid)?.name || 'Đạo Hữu';
+          eventsRef.push({
+            app: 'cv1', kind: 'bondFormed', sid, name: me.name,
+            partner: String(partnerName).slice(0, 40),
+            wish: '', merit: 0, count: 0, giftName: '',
+            fno: 0, frank: '', ftitle: '',
+            seat: me.seat, ts: firebase.database.ServerValue.TIMESTAMP
+          });
+        } catch (_) { }
       }
     } catch (_) { }
   }
@@ -960,6 +971,7 @@ const FirebaseNet = function () {
         const ev = {
           type: m.kind || 'burnIncense', user: m.name || 'Thí Chủ', uniqueId: m.sid,
           wish: m.wish || '', merit: m.merit || 0, count: m.count || 0, giftName: m.giftName || '',
+          partner: m.partner || '',
           fortune: m.fno ? { number: m.fno, rank: m.frank || '', title: m.ftitle || '' } : null,
           seatIdx: Number.isInteger(m.seat) ? m.seat : -1, ts: m.ts || now(), remote: true
         };

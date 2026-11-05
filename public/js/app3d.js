@@ -661,6 +661,15 @@ import { makeDevotee } from './chars3d.js';
   tubeHit.userData.ritual = 'fortune';
   clickables.push(tubeHit);
 
+  // que xăm nhô ra khỏi ống khi gieo — ẩn sẵn, animate theo sequence
+  const fortuneStick = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.016, 0.02, 0.4, 6),
+    new THREE.MeshStandardMaterial({ color: 0xead9b0, roughness: 0.85 })
+  );
+  fortuneStick.position.set(0.32, 1.3, 0.05);
+  fortuneStick.visible = false;
+  mokGroup.add(fortuneStick);
+
   // Lư hương cũng bấm được -> thắp hương
   burner.userData.ritual = 'incense';
   clickables.push(burner);
@@ -1315,6 +1324,7 @@ import { makeDevotee } from './chars3d.js';
       case 'sendPrayer': return `🏮 <strong>${escapeHtml(ev.user)}</strong> cầu phúc: “${escapeHtml(ev.wish)}”`;
       case 'offerGift':
       case 'grandCeremony': return `🪷 <strong>${escapeHtml(ev.user)}</strong> dâng <em>${escapeHtml(ev.giftName)}</em> (+${ev.merit} CĐ)`;
+      case 'bondFormed': return `💞 <strong>${escapeHtml(ev.user)}</strong> và <strong>${escapeHtml(ev.partner || 'Đạo Hữu')}</strong> kết duyên`;
       case 'drawFortune': return `🎋 <strong>${escapeHtml(ev.user)}</strong> gieo được Quẻ số ${ev.fortune?.number} (${ev.fortune?.rank})`;
       case 'seatTaken': return `🪷 <strong>${escapeHtml(ev.user)}</strong> vào chùa, ngồi chiếu số ${(ev.seatIdx ?? 0) + 1}`;
       case 'seatVacated': return `🚪 <strong>${escapeHtml(ev.user)}</strong> công phu xong, ra về`;
@@ -1329,18 +1339,76 @@ import { makeDevotee } from './chars3d.js';
   function showFortuneModal(user, fortune) {
     if (!fortune) return;
     const modal = document.getElementById('fortuneModal');
+    const card = modal?.querySelector('.fortune-scroll-card');
+    card?.classList.remove('flip-in');
+    if (card) void card.offsetWidth; // restart animation
+    card?.classList.add('flip-in');
+    const numEl = document.getElementById('fortuneNumber');
+    if (numEl) numEl.textContent = fortune.number ?? '—';
     document.getElementById('fortuneRankBadge').textContent = fortune.rank.toUpperCase();
     document.getElementById('fortuneTitle').textContent = `Quẻ Số ${fortune.number} — ${fortune.title}`;
     document.getElementById('fortuneDevotee').textContent = `Thí chủ cầu quẻ: ${user}`;
-    document.getElementById('fortunePoem').textContent = fortune.poem;
+    // từng câu thơ hiện lần lượt — nhịp như đọc kinh
+    const poemEl = document.getElementById('fortunePoem');
+    if (poemEl) {
+      poemEl.innerHTML = String(fortune.poem || '')
+        .split('\n').filter((l) => l.trim())
+        .map((l, i) => `<span class="poem-line" style="animation-delay:${0.2 + i * 0.3}s">${escapeHtml(l)}</span>`)
+        .join('');
+    }
     document.getElementById('fortuneMeaning').textContent = `Lời bàn: ${fortune.meaning}`;
+    // theme màu theo hạng quẻ
+    const rk = String(fortune.rank || '');
+    modal.dataset.rank = /thượng|thuong/i.test(rk) ? 'top' : /hạ|ha/i.test(rk) ? 'low' : 'mid';
     modal.classList.add('visible');
     clearTimeout(fortuneTimer);
     fortuneTimer = setTimeout(() => modal.classList.remove('visible'), 15000);
   }
-  document.getElementById('fortuneModal')?.addEventListener('click', () => {
-    document.getElementById('fortuneModal').classList.remove('visible');
+  document.getElementById('fortuneModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'fortuneModal' || e.target.id === 'btnFortuneClose')
+      document.getElementById('fortuneModal').classList.remove('visible');
   });
+  document.getElementById('btnFortuneClose')?.addEventListener('click', () =>
+    document.getElementById('fortuneModal')?.classList.remove('visible'));
+
+  // ── Nghi thức gieo quẻ: lắc ống → que nhô lên → lật quẻ ──
+  function playFortuneDraw(user, fortune) {
+    const G = window.gsap;
+    audio.playFortuneShake();
+    const resetTube = () => {
+      if (!G) return;
+      G.killTweensOf([tube.rotation, tube.position, mokGroup.rotation, mokGroup.position]);
+      tube.rotation.z = -0.12; tube.position.y = 1.0;
+      mokGroup.rotation.y = -0.3; mokGroup.position.y = 0;
+    };
+    if (G) {
+      // lắc mạnh ống xăm ~2.1s
+      G.fromTo(tube.rotation, { z: -0.12 }, { z: 0.4, duration: 0.085, yoyo: true, repeat: 24, ease: 'sine.inOut' });
+      G.fromTo(tube.position, { y: 1.0 }, { y: 1.07, duration: 0.11, yoyo: true, repeat: 19, ease: 'sine.inOut' });
+      G.fromTo(mokGroup.rotation, { y: -0.3 }, { y: -0.1, duration: 0.13, yoyo: true, repeat: 16, ease: 'sine.inOut' });
+      G.fromTo(mokGroup.position, { y: 0 }, { y: 0.03, duration: 0.1, yoyo: true, repeat: 20, ease: 'sine.inOut' });
+    }
+    // que nhô lên khỏi miệng ống
+    setTimeout(() => {
+      resetTube();
+      fortuneStick.visible = true;
+      fortuneStick.position.set(0.32, 1.3, 0.05);
+      fortuneStick.rotation.set(0, 0, 0);
+      if (G) {
+        G.to(fortuneStick.position, { y: 1.66, duration: 0.6, ease: 'back.out(1.7)' });
+        G.to(fortuneStick.rotation, { z: 0.55, x: 0.15, duration: 0.6 });
+      }
+      audio.playIncenseChime();
+    }, 2150);
+    // lật quẻ — que bay nhẹ rồi modal hiện
+    setTimeout(() => {
+      if (G) G.to(fortuneStick.position, { y: 1.95, duration: 0.45, ease: 'power1.in' });
+      setTimeout(() => { fortuneStick.visible = false; }, 900);
+      showFortuneModal(user, fortune);
+      clearTimeout(fortuneTimer);
+      fortuneTimer = setTimeout(() => document.getElementById('fortuneModal')?.classList.remove('visible'), 12000);
+    }, 3000);
+  }
 
   function showGrandCeremonyBanner(user, giftName, merit) {
     const banner = document.getElementById('grandCeremonyBanner');
@@ -1349,6 +1417,43 @@ import { makeDevotee } from './chars3d.js';
     banner.classList.add('visible');
     clearTimeout(grandTimer);
     grandTimer = setTimeout(() => banner.classList.remove('visible'), 6800);
+  }
+
+  // ── Màn chúc mừng kết duyên: confetti + chuông + cánh hoa — mọi người cùng mừng ──
+  let lastBondKey = '', lastBondTs = 0;
+  function celebrateBond(nameA, nameB) {
+    const ov = document.getElementById('bondCelebration');
+    if (!ov) return;
+    // dedup: 2 người trong đôi nhận cả onBond lẫn event bondFormed — chỉ mừng 1 lần
+    const key = [nameA, nameB].map((s) => String(s || '').toLowerCase()).sort().join('|');
+    const t = Date.now();
+    if (key === lastBondKey && t - lastBondTs < 15000) return;
+    lastBondKey = key; lastBondTs = t;
+
+    document.getElementById('bondNameA').textContent = nameA || 'Đạo Hữu';
+    document.getElementById('bondNameB').textContent = nameB || 'Đạo Hữu';
+    const layer = ov.querySelector('.bond-confetti');
+    if (layer) {
+      layer.innerHTML = '';
+      const colors = ['#ffd766', '#e8a52c', '#ff5a5a', '#fff3d6', '#f4c76a', '#ffffff', '#ff9ab0'];
+      for (let i = 0; i < 90; i++) {
+        const p = document.createElement('i');
+        p.style.left = (Math.random() * 100) + '%';
+        p.style.background = colors[i % colors.length];
+        p.style.animationDelay = (Math.random() * 1.8) + 's';
+        p.style.animationDuration = (2.4 + Math.random() * 2.4) + 's';
+        p.style.width = (6 + Math.random() * 7) + 'px';
+        p.style.height = (10 + Math.random() * 9) + 'px';
+        layer.appendChild(p);
+      }
+    }
+    ov.classList.add('visible');
+    audio.playTempleBell(0.9);
+    setTimeout(() => audio.playTempleBell(0.7), 650);
+    if (typeof spawnPetalRain === 'function') spawnPetalRain(10);
+    clearTimeout(ov._t);
+    ov._t = setTimeout(() => ov.classList.remove('visible'), 7000);
+    ov.onclick = () => { ov.classList.remove('visible'); clearTimeout(ov._t); };
   }
 
   const BURNER_POS = new THREE.Vector3(0, 1.1, -8.3);
@@ -1409,28 +1514,20 @@ import { makeDevotee } from './chars3d.js';
         walkAndBow(ev.user, `🐉 ${ev.giftName} (+${ev.merit} CĐ)`, ev.wish, ev.seatIdx, ev.uniqueId);
         break;
       case 'drawFortune':
-        audio.playFortuneShake();
-        if (ev.remote || !ev.ttsText) {
-          // nghi thức của người khác — không có TTS, hiển thị trực tiếp
-          audio.playIncenseChime();
-          showFortuneModal(ev.user, ev.fortune);
-          walkAndBow(ev.user, `🎋 Quẻ số ${ev.fortune?.number || '?'} (${ev.fortune?.rank || 'Linh Xăm'})`, '', ev.seatIdx, ev.uniqueId);
-          clearTimeout(fortuneTimer);
-          fortuneTimer = setTimeout(() => document.getElementById('fortuneModal')?.classList.remove('visible'), 6000);
-          break;
+        // nghi thức gieo quẻ: lắc ống → que nhô → lật quẻ (chung cho mọi người xem)
+        playFortuneDraw(ev.user, ev.fortune);
+        walkAndBow(ev.user, `🎋 Quẻ số ${ev.fortune?.number || '?'} (${ev.fortune?.rank || 'Linh Xăm'})`, '', ev.seatIdx, ev.uniqueId);
+        if (!ev.remote && ev.ttsText) {
+          // TTS đọc quẻ sau khi thẻ lật
+          setTimeout(() => audio.enqueueTts(ev.ttsText || '', {
+            voice: ev.ttsVoice || 'maichi',
+            onStart: () => audio.playIncenseChime()
+          }), 3100);
         }
-        audio.enqueueTts(ev.ttsText || '', {
-          voice: ev.ttsVoice || 'maichi',
-          onStart: () => {
-            audio.playIncenseChime();
-            showFortuneModal(ev.user, ev.fortune);
-            walkAndBow(ev.user, `🎋 Quẻ số ${ev.fortune?.number} (${ev.fortune?.rank})`, ev.fortune?.meaning || '', ev.seatIdx, ev.uniqueId);
-          },
-          onEnd: () => {
-            clearTimeout(fortuneTimer);
-            fortuneTimer = setTimeout(() => document.getElementById('fortuneModal')?.classList.remove('visible'), 1800);
-          }
-        });
+        break;
+      case 'bondFormed':
+        // mọi người cùng chúc mừng đôi kết duyên
+        celebrateBond(ev.partner || 'Đạo Hữu', ev.user || 'Đạo Hữu');
         break;
     }
   }
@@ -1891,7 +1988,7 @@ import { makeDevotee } from './chars3d.js';
     window.TempleNet.onBond = (b) => {
       if (b) {
         if (dmPartnerName) dmPartnerName.textContent = b.name || 'Đạo Hữu';
-        toast(`💞 Đã kết duyên với ${b.name || 'Đạo Hữu'} — chat riêng ở tab Riêng`);
+        celebrateBond(vtName() || 'Bạn', b.name || 'Đạo Hữu');
         setChatTab(true);
       } else {
         setChatTab(false);

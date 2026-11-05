@@ -13,7 +13,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Noto+Serif:wght@700;900&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="/css/live.css?v=21" />
+  <link rel="stylesheet" href="/css/live.css?v=22" />
   <script>
     // Cổng pháp danh: chưa ghi danh → chặn vào chùa (chạy đồng bộ, không flash cho người đã ghi danh)
     try {
@@ -119,11 +119,25 @@
       <!-- MODAL TỜ GIẢI QUẺ LINH XĂM -->
       <div class="fortune-modal-overlay" id="fortuneModal">
         <div class="fortune-scroll-card">
+          <div class="fortune-number" id="fortuneNumber">1</div>
           <div class="fortune-badge" id="fortuneRankBadge">THƯỢNG THƯỢNG CÁT</div>
           <div class="fortune-heading" id="fortuneTitle">Quẻ Số 1 — Nhật Xuất Đông Phương</div>
           <div class="fortune-devotee" id="fortuneDevotee">Thí chủ xin quẻ: Minh Tâm</div>
           <div class="fortune-poem" id="fortunePoem"></div>
           <div class="fortune-meaning" id="fortuneMeaning"></div>
+          <button class="fortune-close" id="btnFortuneClose">Đã rõ — Tiếp tục tu hành 🙏</button>
+        </div>
+      </div>
+
+      <!-- MÀN CHÚC MỪNG KẾT DUYÊN — tất cả mọi người cùng mừng -->
+      <div class="bond-celebration" id="bondCelebration">
+        <div class="bond-confetti"></div>
+        <div class="bond-flash"></div>
+        <div class="bond-card">
+          <div class="bond-emoji">💞</div>
+          <div class="bond-title">CHÚC MỪNG KẾT DUYÊN</div>
+          <div class="bond-names"><span id="bondNameA">Đạo Hữu</span><i>♥</i><span id="bondNameB">Đạo Hữu</span></div>
+          <div class="bond-sub">Nam mô A Di Đà Phật — duyên lành hội tụ, cầu chung một nguyện</div>
         </div>
       </div>
 
@@ -302,12 +316,12 @@
   <script src="/vendor/gsap.min.js"></script>
   <script src="/js/vendor/firebase-app-compat.js"></script>
   <script src="/js/vendor/firebase-database-compat.js"></script>
-  <script src="/js/firebase-config.js?v=21"></script>
+  <script src="/js/firebase-config.js?v=22"></script>
   <script src="/js/vendor/mqtt.min.js"></script>
-  <script src="/js/presence.js?v=21"></script>
-  <script src="/js/standalone.js?v=21"></script>
-  <script src="/js/audio.js?v=21"></script>
-  <script type="module" src="/js/app3d.js?v=21"></script>
+  <script src="/js/presence.js?v=22"></script>
+  <script src="/js/standalone.js?v=22"></script>
+  <script src="/js/audio.js?v=22"></script>
+  <script type="module" src="/js/app3d.js?v=22"></script>
 </body>
 
 </html>
