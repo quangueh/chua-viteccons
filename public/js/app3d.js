@@ -2224,6 +2224,7 @@ import { makeDevotee } from './chars3d.js';
     };
 
     let zwChart = null;
+    let zwRefDate = null; // ngày đang xem lưu nhật (null = hôm nay)
     function buildZw() {
       const b = getBirthObj();
       if (b && ZW && ZW.available()) {
@@ -2382,19 +2383,23 @@ import { makeDevotee } from './chars3d.js';
       }
       return s;
     }
+    function isoLocal(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
     function renderZwHan(c) {
+      const ref = zwRefDate ? new Date(zwRefDate + 'T12:00:00') : new Date();
+      const refOk = isNaN(ref.getTime()) ? new Date() : ref;
       let html = `<h4>🔮 Hạn vận — đại hạn · lưu niên · lưu nguyệt · lưu nhật</h4>`;
-      const h = ZW.horoscope(c);
+      html += `<div class="zw-datepick">Xem lưu nhật ngày: <input type="date" id="zwDatePick" value="${isoLocal(refOk)}"> <button class="zen-btn" id="zwDateGo" type="button">Xem</button>${zwRefDate ? ' <button class="zen-btn zw-reset" id="zwDateReset" type="button">Hôm nay</button>' : ''}</div>`;
+      const h = ZW.horoscope(c, isoLocal(refOk));
       if (!h) return html + `<p style="color:var(--muted-gold)">Không đọc được hạn vận.</p>`;
       html += `<div class="zw-horo">`;
       html += fmtHoroLevel(h.decadal, 'Đại hạn');
-      html += fmtHoroLevel(h.year, 'Lưu niên ' + new Date().getFullYear());
-      html += fmtHoroLevel(h.month, 'Lưu nguyệt');
-      html += fmtHoroLevel(h.day, 'Hôm nay (lưu nhật)');
+      html += fmtHoroLevel(h.year, 'Lưu niên ' + refOk.getFullYear());
+      html += fmtHoroLevel(h.month, 'Lưu nguyệt ' + (refOk.getMonth() + 1) + '/' + refOk.getFullYear());
+      html += fmtHoroLevel(h.day, 'Lưu nhật ' + isoLocal(refOk));
       html += `</div>`;
-      // 12 tháng tới
+      // 12 tháng tới (tính từ tháng đang xem)
       html += `<h4 style="margin-top:14px">🗓 Lưu nguyệt 12 tháng tới</h4>`;
-      const now = new Date();
+      const now = refOk;
       const months = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
       for (let i = 0; i < 12; i++) {
         const d = new Date(now.getFullYear(), now.getMonth() + i, 15);
@@ -2414,8 +2419,14 @@ import { makeDevotee } from './chars3d.js';
       return html;
     }
 
-    /* click cung → luận giải */
+    /* click nút chọn ngày lưu nhật */
     zenBody.addEventListener('click', (e) => {
+      if (e.target.id === 'zwDateGo') {
+        const inp = document.getElementById('zwDatePick');
+        if (inp && inp.value) { zwRefDate = inp.value; renderZen('han'); }
+        return;
+      }
+      if (e.target.id === 'zwDateReset') { zwRefDate = null; renderZen('han'); return; }
       const cell = e.target.closest('.zw-cell[data-zw-branch]');
       if (!cell || !zwChart) return;
       const idx = parseInt(cell.dataset.zwPalace, 10);

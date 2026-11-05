@@ -2611,3 +2611,14 @@ html.need-name .name-gate-overlay {
   color: #ddd0b4;
   text-align: justify;
 }
+
+/* ===== Chọn ngày lưu nhật ===== */
+.zw-datepick {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--muted-gold); margin-bottom: 10px;
+}
+.zw-datepick input[type="date"] {
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(216,160,60,0.4);
+  border-radius: 8px; color: var(--ivory); padding: 6px 9px; font-size: 13px;
+}
+.zw-reset { background: linear-gradient(180deg,#999,#666) !important; }
