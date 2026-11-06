@@ -2568,7 +2568,7 @@ import { makeDevotee } from './chars3d.js';
           const stage = document.getElementById('queCastStage');
           const HAO_LB = ['Hào Sơ', 'Hào Nhị', 'Hào Tam', 'Hào Tứ', 'Hào Ngũ', 'Hào Lục'];
           const VAL_LB = { 6: 'Lão Âm ✕ động', 7: 'Thiếu Dương', 8: 'Thiếu Âm', 9: 'Lão Dương ○ động' };
-          stage.innerHTML = '<div class="que-casting"><div class="que-coins"><span class="que-coin">🪙</span><span class="que-coin">🪙</span><span class="que-coin">🪙</span></div><div class="que-cline" id="queCLb"></div><div class="que-stack" id="queStack"></div></div>';
+          stage.innerHTML = '<div class="que-casting"><div class="que-coins"><span class="que-coin"><i></i></span><span class="que-coin"><i></i></span><span class="que-coin"><i></i></span></div><div class="que-cline" id="queCLb"></div><div class="que-stack" id="queStack"></div></div>';
           const lb = document.getElementById('queCLb'), stack = document.getElementById('queStack');
           let i = 0;
           const step = () => {
