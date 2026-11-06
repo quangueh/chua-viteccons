@@ -6,6 +6,10 @@
  */
 import * as THREE from '/vendor/three.module.js';
 import { makeDevotee, preloadRealDevotee, hasRealDevotee, makeRealDevotee, realDevotees } from './chars3d.js';
+const nameVariant = (n) => {
+  let h = 0; for (const c of String(n || '')) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return Math.abs(h) % 3;
+};
 const mkDevotee = (o) => hasRealDevotee() ? makeRealDevotee(o) : makeDevotee(o);
 
 (function () {
@@ -768,10 +772,10 @@ const mkDevotee = (o) => hasRealDevotee() ? makeRealDevotee(o) : makeDevotee(o);
   // NGƯỜI ĐI LẠI — pool nhân vật đứng, bước ra khỏi ghế / vào chùa / ra về
   // ============================================================
   const travelers = [];
-  function getTraveler() {
-    let t = travelers.find((x) => !x.busy);
+  function getTraveler(variant = 0) {
+    let t = travelers.find((x) => !x.busy && x.variant === variant);
     if (!t) {
-      t = { char: mkDevotee({ sitting: false }), busy: false, labelEl: addSeatLabel('') };
+      t = { char: mkDevotee({ sitting: false, variant }), busy: false, variant, labelEl: addSeatLabel('') };
       t.char.group.visible = false;
       t.labelEl.classList.add('walker-label');
       scene.add(t.char.group);
@@ -816,7 +820,7 @@ const mkDevotee = (o) => hasRealDevotee() ? makeRealDevotee(o) : makeDevotee(o);
     tl.call(() => {
       t.char.legs.l.rotation.x = 0;
       t.char.legs.r.rotation.x = 0;
-      if (t.char.real) t.char.play('Idle_Neutral');
+      if (t.char.real) t.char.play('Idle');
     });
   }
 
@@ -850,7 +854,7 @@ const mkDevotee = (o) => hasRealDevotee() ? makeRealDevotee(o) : makeDevotee(o);
     const seat = SEATS[idx];
     sc.status = 'walking_in';
     sc.occupant = occupant;
-    const t = getTraveler();
+    const t = getTraveler(nameVariant(occupant && occupant.name));
     t.labelEl.innerHTML = `<b>${escapeHtml(occupant.name)}</b>`;
     t.char.group.position.set(0, 0, 6.4);
     faceDir(t.char, 0, -1);
@@ -859,7 +863,7 @@ const mkDevotee = (o) => hasRealDevotee() ? makeRealDevotee(o) : makeDevotee(o);
       releaseTraveler(t);
       if (sc.status !== 'walking_in') return; // nghi thức/ra về đã chiếm quyền
       // ngồi xuống: đổi sang nhân vật ngồi tại chiếu
-      const dev = mkDevotee({ sitting: true });
+      const dev = mkDevotee({ sitting: true, variant: nameVariant(occupant && occupant.name) });
       dev.group.position.set(seat.x, 0, seat.z);
       scene.add(dev.group);
       sc.devotee = dev;
@@ -884,7 +888,7 @@ const mkDevotee = (o) => hasRealDevotee() ? makeRealDevotee(o) : makeDevotee(o);
     if (sc.devotee) { scene.remove(sc.devotee.group); sc.devotee.dispose && sc.devotee.dispose(); sc.devotee = null; }
     if (sc.labelEl) { sc.labelEl.remove(); sc.labelEl = null; }
     sc.status = 'leaving';
-    const t = getTraveler();
+    const t = getTraveler(nameVariant(occ && occ.name));
     t.labelEl.innerHTML = occ ? `<b>${escapeHtml(occ.name)}</b>` : '';
     t.char.group.position.set(seat.x, 0, seat.z);
     const aisleX = Math.sign(seat.x) * 1.32;
@@ -908,7 +912,7 @@ const mkDevotee = (o) => hasRealDevotee() ? makeRealDevotee(o) : makeDevotee(o);
   function renderQueue(queue) {
     const q = Array.isArray(queue) ? queue.slice(0, 8) : [];
     while (queueChars.length < q.length) {
-      const c = mkDevotee({ sitting: false });
+      const c = mkDevotee({ sitting: false, variant: queueChars.length % 3 });
       c.group.scale.setScalar(0.92);
       scene.add(c.group);
       queueChars.push({ char: c, labelEl: addSeatLabel('') });
@@ -1159,7 +1163,7 @@ const mkDevotee = (o) => hasRealDevotee() ? makeRealDevotee(o) : makeDevotee(o);
       if (sc.devotee) sc.devotee.group.visible = false;
       if (sc.labelEl) sc.labelEl.style.display = 'none';
     }
-    const t = getTraveler();
+    const t = getTraveler(nameVariant(user));
     t.labelEl.innerHTML = `<b>${escapeHtml(user)}</b><span>${escapeHtml(actionLabel)}</span>`;
     const startPos = seat ? { x: seat.x, z: seat.z } : { x: 0, z: 6.4 };
     t.char.group.position.set(startPos.x, 0, startPos.z);
@@ -1189,7 +1193,7 @@ const mkDevotee = (o) => hasRealDevotee() ? makeRealDevotee(o) : makeDevotee(o);
                 return;
               }
               // chưa kịp ngồi (đang walking_in) → tạo nhân vật ngồi luôn
-              const dev = mkDevotee({ sitting: true });
+              const dev = mkDevotee({ sitting: true, variant: nameVariant(sc.occupant && sc.occupant.name) });
               dev.group.position.set(seat.x, 0, seat.z);
               scene.add(dev.group);
               sc.devotee = dev;

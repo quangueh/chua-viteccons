@@ -437,34 +437,42 @@ export function bowTo(devotee, angle, dur = 0.5, ease = 'power2.inOut') {
  * đúng tỷ lệ người, mặt thật (mắt/mày/ria), mũ công trường + giáp, 24 anim.
  * makeRealDevotee({ sitting }) -> { group, hip, head, mixer, play, sitting }
  * ==========================================================================*/
-let realProto = null;
+let realProtos = [];
+const REAL_MODELS = [
+  { url: '/assets/devotee.glb', name: 'worker', idle: 'Idle_Neutral', walk: 'Walk' },
+  { url: '/assets/devotee_casual.glb', name: 'casual', idle: 'Idle_Neutral', walk: 'Walk' },
+  { url: '/assets/devotee_woman.glb', name: 'woman', idle: 'Female_Standing', walk: 'Female_Walk', sit: 'Female_Sitting' }
+];
+let realLoaded = false;
 
-export function preloadRealDevotee(url = '/assets/devotee.glb') {
-  if (realProto) return Promise.resolve(true);
-  return new Promise((resolve) => {
-    new GLTFLoader().load(url,
-      (g) => { realProto = g; resolve(true); },
-      undefined,
-      () => resolve(false));
+export function preloadRealDevotee() {
+  if (realLoaded) return Promise.resolve(true);
+  const loader = new GLTFLoader();
+  return Promise.all(REAL_MODELS.map((m) => new Promise((res) => {
+    loader.load(m.url, (g) => { m.proto = g; res(); }, undefined, () => res());
+  }))).then(() => {
+    realProtos = REAL_MODELS.filter((m) => m.proto);
+    realLoaded = realProtos.length > 0;
+    return realLoaded;
   });
 }
-export function hasRealDevotee() { return !!realProto; }
+export function hasRealDevotee() { return realLoaded; }
 
 // registry để app3d cập nhật mixer mỗi frame
 export const realDevotees = new Set();
 
-export function makeRealDevotee({ sitting = true } = {}) {
-  const inst = skeletonClone(realProto.scene);
+export function makeRealDevotee({ sitting = true, variant = 0 } = {}) {
+  const cfg = realProtos[Math.abs(variant) % realProtos.length];
+  const inst = skeletonClone(cfg.proto.scene);
   const group = new THREE.Group();
   const hip = new THREE.Group();          // pivot lạy
   group.add(hip);
   hip.add(inst);
 
   // chuẩn hóa chiều cao theo BONE (skinned bounds không tin cậy):
-  // head bone y * ~1.15 ≈ chiều cao đỉnh đầu
   inst.updateMatrixWorld(true);
   const headBone0 = inst.getObjectByName('Head');
-  const footBone0 = inst.getObjectByName('Foot.L') || inst.getObjectByName('Hips');
+  const footBone0 = inst.getObjectByName('FootL') || inst.getObjectByName('Hips');
   const _v = new THREE.Vector3();
   const headY = headBone0 ? headBone0.getWorldPosition(_v).y : 1;
   const footY = footBone0 ? footBone0.getWorldPosition(_v).y : 0;
@@ -477,7 +485,9 @@ export function makeRealDevotee({ sitting = true } = {}) {
   // animation
   const mixer = new THREE.AnimationMixer(inst);
   const clips = {};
-  for (const a of realProto.animations) clips[a.name.split('|').pop()] = a;
+  for (const a of cfg.proto.animations) clips[a.name.split('|').pop()] = a;
+  clips.Walk = clips[cfg.walk];
+  clips.Idle = clips[cfg.idle];
   let cur = null;
   const play = (name, fade = 0.25) => {
     const c = clips[name];
@@ -490,35 +500,95 @@ export function makeRealDevotee({ sitting = true } = {}) {
     return next;
   };
 
-  // bones cần dùng
+  // bones cần dùng (three.js bỏ dấu chấm trong tên node → UpperLegL)
   const b = (n) => inst.getObjectByName(n);
   const bones = {
     hips: b('Hips'), head: b('Head'), chest: b('Chest'),
-    uLegL: b('UpperLeg.L'), lLegL: b('LowerLeg.L'),
-    uLegR: b('UpperLeg.R'), lLegR: b('LowerLeg.R'),
-    footL: b('Foot.L'), footR: b('Foot.R')
+    uArmL: b('UpperArmL'), lArmL: b('LowerArmL'),
+    uArmR: b('UpperArmR'), lArmR: b('LowerArmR'),
+    uLegL: b('UpperLegL'), lLegL: b('LowerLegL'),
+    uLegR: b('UpperLegR'), lLegR: b('LowerLegR'),
+    footL: b('FootL'), footR: b('FootR')
   };
 
   const d = {
-    group, hip, mixer, play, bones,
+    group, hip, mixer, play, bones, cfg,
     head: bones.head || inst,
     legs: { l: { rotation: { x: 0 } }, r: { rotation: { x: 0 } } }, // compat
     arms: { l: null, r: null },
     faceParts: null,
     real: true, sitting,
-    dispose() { realDevotees.delete(d); }
+    dispose() {
+      realDevotees.delete(d);
+      mixer.stopAllAction();
+      inst.traverse((o) => {
+        if (o.isMesh && o.material) {
+          const ms = Array.isArray(o.material) ? o.material : [o.material];
+          for (const m of ms) m.dispose && m.dispose();
+        }
+      });
+    }
   };
   realDevotees.add(d);
 
-  // ngồi xếp bằng trên chiếu: hạ thân xuống — chân chìm dưới sàn (bị chiếu che),
-  // thân trên vẫn Idle thở nhẹ → trông như đang ngồi thiền
+  // IK-lite: xoay bone để hướng xương (→ child) trong world khớp hướng đích
+  const aimBone = (bone, targetDir, pos) => {
+    if (!bone) return;
+    if (pos) {
+      bone.parent.updateWorldMatrix(true, false);
+      bone.position.copy(bone.parent.worldToLocal(pos.clone()));
+      bone.updateWorldMatrix(true, true);
+    }
+    const child = bone.children.find((c) => c.isBone || c.name.endsWith('_end')) || bone.children[0];
+    if (!child) return;
+    bone.updateWorldMatrix(true, false);
+    const bp = new THREE.Vector3(), cp = new THREE.Vector3();
+    bone.getWorldPosition(bp);
+    child.getWorldPosition(cp);
+    const cur = cp.sub(bp).normalize();
+    if (cur.lengthSq() < 0.4) return;
+    const dq = new THREE.Quaternion().setFromUnitVectors(cur, targetDir.clone().normalize());
+    const bq = new THREE.Quaternion(); bone.getWorldQuaternion(bq);
+    const pq = new THREE.Quaternion(); bone.parent.getWorldQuaternion(pq);
+    bq.premultiply(dq);
+    bone.quaternion.copy(pq.invert().multiply(bq));
+    bone.updateWorldMatrix(true, true);
+  };
+
   if (sitting) {
     hip.position.y = 0.30;
-    inst.position.y -= 0.42;
-    inst.traverse((o) => { if (o.name === 'Worker_Legs' || o.name === 'Worker_Feet') o.visible = false; }); // giấu chân — ngồi xếp
+    // thân trên vẫn thở nhẹ: cắt track chân/hông khỏi idle rồi pose quỳ thủ công
+    const idleClip = clips[cfg.idle] || clips[cfg.sit];
+    if (idleClip) {
+      const upper = new THREE.AnimationClip('upper_idle', idleClip.duration,
+        idleClip.tracks.filter((t) => !/UpperLeg|LowerLeg|Foot|Hips|Root/i.test(t.name)));
+      const act = mixer.clipAction(upper);
+      act.play(); cur = act;
+    }
+    // quỳ seiza trên chiếu: đùi chếch xuống-trước, cẳng + bàn chân gập ngửa ra sau
+    for (const side of ['L', 'R']) {
+      aimBone(bones['uLeg' + side], new THREE.Vector3(0, -0.6, 0.45));
+      aimBone(bones['lLeg' + side], new THREE.Vector3(0, -0.05, -1.0));
+      const shin = bones['lLeg' + side];
+      const shinEnd = shin && shin.children.find((c) => c.name.endsWith('_end')) || (shin && shin.children[0]);
+      if (shinEnd) {
+        const sp = new THREE.Vector3();
+        shinEnd.getWorldPosition(sp);
+        aimBone(bones['foot' + side], new THREE.Vector3(0, 0.1, -1.0), sp);
+      }
+    }
+    // hạ inst để đầu gối nằm ngay trên mặt chiếu (~0.12)
+    inst.updateMatrixWorld(true);
+    const knee = bones.lLegL || bones.lLegR;
+    if (knee) {
+      const ky = knee.getWorldPosition(new THREE.Vector3()).y;
+      inst.position.y -= ky - 0.12;
+    }
+  } else {
+    play(cfg.idle);
   }
 
-  // đổi màu mũ sang trắng Viteccons + tô điểm vest (vật liệu share → clone)
+  // đổi màu mũ/vest sang tông Viteccons (clone material tránh share)
   inst.traverse((o) => {
     if (!o.isMesh || !o.material) return;
     const mats = Array.isArray(o.material) ? o.material : [o.material];
