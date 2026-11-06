@@ -565,16 +565,29 @@ export function makeRealDevotee({ sitting = true, variant = 0 } = {}) {
       const act = mixer.clipAction(upper);
       act.play(); cur = act;
     }
-    // quỳ seiza trên chiếu: đùi chếch xuống-trước, cẳng + bàn chân gập ngửa ra sau
+    // quỳ seiza trên chiếu: model mặt -z (hướng Phật) → đùi chếch xuống-trước (-z),
+    // cẳng + bàn chân gập ngửa ra sau (+z)
     for (const side of ['L', 'R']) {
-      aimBone(bones['uLeg' + side], new THREE.Vector3(0, -0.6, 0.45));
-      aimBone(bones['lLeg' + side], new THREE.Vector3(0, -0.05, -1.0));
+      aimBone(bones['uLeg' + side], new THREE.Vector3(0, -0.6, -0.45));
+      aimBone(bones['lLeg' + side], new THREE.Vector3(0, -0.05, 1.0));
       const shin = bones['lLeg' + side];
       const shinEnd = shin && shin.children.find((c) => c.name.endsWith('_end')) || (shin && shin.children[0]);
       if (shinEnd) {
         const sp = new THREE.Vector3();
         shinEnd.getWorldPosition(sp);
-        aimBone(bones['foot' + side], new THREE.Vector3(0, 0.1, -1.0), sp);
+        aimBone(bones['foot' + side], new THREE.Vector3(0, 0.1, 1.0), sp);
+      }
+    }
+    // tay chắp trước ngực: cẳng tay hướng về điểm giữa xương ức
+    const chest = bones.chest || bones.head;
+    if (chest) {
+      const cp = chest.getWorldPosition(new THREE.Vector3());
+      cp.y -= 0.12; cp.z -= 0.16; // trước ngực một chút
+      for (const side of ['L', 'R']) {
+        const la = bones['lArm' + side];
+        if (!la) continue;
+        const ep = la.getWorldPosition(new THREE.Vector3());
+        aimBone(la, cp.clone().sub(ep).normalize());
       }
     }
     // hạ inst để đầu gối nằm ngay trên mặt chiếu (~0.12)
