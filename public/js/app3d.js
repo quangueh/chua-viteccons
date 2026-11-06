@@ -2269,7 +2269,7 @@ import { makeDevotee } from './chars3d.js';
 
     function renderZen(tab) {
       const card = document.querySelector('.zen-card');
-      if (card) card.classList.toggle('zw-mode', tab === 'chart');
+      if (card) card.classList.toggle('zw-mode', tab === 'chart' || tab === 'report');
       const birth = getBirth();
       if (zenBirth && birth) zenBirth.value = birth;
       let html = '';
@@ -2328,8 +2328,17 @@ import { makeDevotee } from './chars3d.js';
             html += renderZwChart(zwChart);
           }
         }
-      } else if (tab === 'han') {
-        // ── HẠN VẬN: đại hạn / lưu niên / lưu nguyệt / lưu nhật + 12 tháng tới ──
+      } else if (tab === 'report') {
+        const b = getBirthObj();
+        if (!b) {
+          html = `<h4>📜 Bản luận giải</h4><p style="color:var(--muted-gold)">Nhập ngày sinh + giờ sinh + giới tính rồi bấm "Lập lá số".</p>`;
+        } else if (!ZW || !ZW.available()) {
+          html = `<h4>📜 Bản luận giải</h4><p style="color:var(--muted-gold)">Engine tử vi chưa sẵn sàng.</p>`;
+        } else {
+          if (!zwChart) buildZw();
+          html += zwChart ? renderZwReport(zwChart) : `<h4>📜 Bản luận giải</h4><p style="color:var(--muted-gold)">Không lập được lá số.</p>`;
+        }
+      } else if (tab === 'han') {        // ── HẠN VẬN: đại hạn / lưu niên / lưu nguyệt / lưu nhật + 12 tháng tới ──
         const b = getBirthObj();
         if (!b) {
           html = `<h4>🔮 Hạn vận</h4><p style="color:var(--muted-gold)">Nhập đầy đủ ngày + giờ sinh + giới tính rồi bấm "Lập lá số".</p>`;
@@ -2468,6 +2477,69 @@ import { makeDevotee } from './chars3d.js';
       return s;
     }
     function isoLocal(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    /* ---------- BẢN LUẬN GIẢI TOÀN DIỆN — báo cáo nhiều chương ---------- */
+    function renderZwReport(c) {
+      const rep = ZW.fullReport(c);
+      if (!rep) return `<h4>📜 Bản luận giải</h4><p style="color:var(--muted-gold)">Không lập được báo cáo.</p>`;
+      const name = (localStorage.getItem('chua_vt_name') || 'Thí chủ').toUpperCase();
+      let h = `<div class="zw-rep">`;
+      /* Bìa */
+      h += `<div class="zw-rep-cover"><div class="zw-rep-kicker">TỬ VI ĐẨU SỐ · MỆNH LÝ HỌC</div>` +
+        `<h2 class="zw-rep-h1">LUẬN GIẢI LÁ SỐ TỬ VI</h2><div class="zw-rep-sub">HỒ SƠ PHÂN TÍCH VẬN MỆNH</div>` +
+        `<div class="zw-rep-who">${escapeHtml(name)}</div>` +
+        `<div class="zw-rep-meta">${rep.gender} · Tuổi ${rep.zodiac} · ${rep.juName}</div>` +
+        `<div class="zw-rep-2col"><div><span class="zw-rep-lb">BẢN MỆNH</span><b>${escapeHtml(rep.mingStars)}</b><i>cung ${rep.mingBranch}</i></div>` +
+        `<div><span class="zw-rep-lb">THÂN CƯ</span><b>${escapeHtml(rep.shenName)}</b><i>${escapeHtml(rep.shenStars)}</i></div></div>` +
+        `<div class="zw-rep-theme"><span class="zw-rep-lb">CHỦ ĐỀ XUYÊN SUỐT</span><b>${escapeHtml(rep.theme || '—')}</b></div></div>`;
+      /* I. Bản mệnh */
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">I. TỔNG LUẬN BẢN MỆNH</h3>${fmtZwBodyInline(rep.banMenh)}</div>`;
+      /* II. 12 cung */
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">II. LUẬN GIẢI 12 CUNG</h3>`;
+      rep.palaces12.forEach((p) => {
+        h += `<details class="zw-rep-pal"><summary><span class="zw-rep-num">${String(p.idx).padStart(2, '0')}</span>` +
+          `<span class="zw-rep-pname">CUNG ${p.name.toUpperCase()}</span>` +
+          `<span class="zw-rep-ptt">${escapeHtml(p.trongTam)}</span></summary>` +
+          `<div class="zw-rep-pbody"><div class="zw-rep-kw">${escapeHtml(p.kw)}</div>`;
+        p.starLines.forEach((l) => { h += `<div class="zw-li">⭐ ${escapeHtml(l)}</div>`; });
+        if (p.nen.length) h += `<div class="zw-act"><b class="zw-act-lb">NÊN</b><span>${escapeHtml(p.nen.join('; '))}</span></div>`;
+        if (p.tranh.length) h += `<div class="zw-act zw-avoid"><b class="zw-act-lb">TRÁNH</b><span>${escapeHtml(p.tranh.join('; '))}</span></div>`;
+        if (p.nghe) h += `<div class="zw-act"><b class="zw-act-lb">NGHỀ</b><span>${escapeHtml(p.nghe)}</span></div>`;
+        if (p.sk) h += `<div class="zw-act"><b class="zw-act-lb">SỨC KHỎE</b><span>${escapeHtml(p.sk)}</span></div>`;
+        if (p.deep) h += `<p class="zw-p">${escapeHtml(p.deep)}</p>`;
+        h += `</div></details>`;
+      });
+      h += `</div>`;
+      /* III. Sự nghiệp & tài bạch */
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">III. SỰ NGHIỆP VÀ TÀI BẠCH</h3>${fmtZwBodyInline(rep.snTb)}</div>`;
+      /* IV. Cách cục */
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">IV. CÁCH CỤC LÁ SỐ</h3>`;
+      if (rep.patsAll.length) {
+        rep.patsAll.forEach((x) => {
+          h += `<div class="zw-pat"><b>${escapeHtml(x.name)}</b> <i>(${escapeHtml(x.level)} — cung ${escapeHtml(x.palace)})</i><br>${escapeHtml(x.desc)}</div>`;
+        });
+      } else h += `<p class="zw-p">Lá số không rơi vào cách cục đặc biệt nào — vận đi theo sức sao riêng lẻ, chủ động là chính.</p>`;
+      h += `</div>`;
+      /* V. Tam phương */
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">V. TAM PHƯƠNG TỨ CHÍNH</h3>`;
+      rep.tamBlocks.forEach((g) => {
+        h += `<div class="zw-rep-tam"><b>${escapeHtml(g.label)}</b> <i>${escapeHtml(g.note)}</i>`;
+        g.rows.forEach((r) => { h += `<div class="zw-li">${escapeHtml(r)}</div>`; });
+        h += `</div>`;
+      });
+      h += `</div>`;
+      /* VI. Đại vận */
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">VI. ĐẠI VẬN CUỘC ĐỜI</h3><div class="zw-rep-dai">`;
+      rep.daiVan.forEach((d) => {
+        h += `<div class="zw-rep-daiitem"><b>${escapeHtml(d.range)}</b><span>${escapeHtml(d.label)}</span>` +
+          (d.stars ? `<i>cung ${escapeHtml(d.palace)} — ${escapeHtml(d.stars)}</i>` : `<i>cung ${escapeHtml(d.palace)}</i>`) + `</div>`;
+      });
+      h += `</div></div>`;
+      /* VII. Tổng kết */
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">VII. TỔNG KẾT LÁ SỐ</h3><table class="zw-rep-tbl">`;
+      rep.tongKet.forEach((r) => { h += `<tr><td>${escapeHtml(r[0])}</td><td>${escapeHtml(r[1])}</td></tr>`; });
+      h += `</table><p class="zw-p" style="font-size:11px;opacity:.75">Lưu ý: Tử Vi là hệ thống luận đoán truyền thống phục vụ tu tập — tham khảo, không phải dự báo chắc chắn.</p></div></div>`;
+      return h;
+    }
     function renderZwHan(c) {
       const ref = zwRefDate ? new Date(zwRefDate + 'T12:00:00') : new Date();
       const refOk = isNaN(ref.getTime()) ? new Date() : ref;

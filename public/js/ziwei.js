@@ -387,7 +387,147 @@
       return lines.join('\n');
     },
 
-    /* LUẬN CHUNG CẢ LÁ SỐ — như thầy phán lá số tổng thể trước khi xét từng cung */
+    /* BẢN LUẬN GIẢI TOÀN DIỆN — cấu trúc báo cáo nhiều chương */
+    fullReport: function (chartObj) {
+      if (!chartObj) return null;
+      var T = window.ZiweiTexts || {};
+      var D = window.ZiweiDeep || {};
+      var ZP = window.ZiweiPatterns;
+      var ps = chartObj.palaces || [];
+      var self = this;
+      var find = function (n) { return ps.filter(function (p) { return p.name === n; })[0]; };
+      var lvName = { excellent: 'Đại cách', good: 'Cách tốt', neutral: 'Cách trung', caution: 'Cách đề phòng' };
+      var majors = function (p) { return self.majorsOf(p); };
+      var domTxt = function (s, p) { return (((T.STAR_DOMAIN || {})[s.name] || {})[(T.DOMAIN || {})[p.name] || 'self'] || ''); };
+      var starKw = function (s) { return ((STAR_INFO[s.name] || {}).kw || (T.STAR_INFO || {})[s.name] && ((T.STAR_INFO || {})[s.name] || {}).kw || '').toString(); };
+
+      var ming = find('Mệnh'), shen = ps.filter(function (p) { return p.isShen || p.isBody; })[0];
+      var tai = find('Tài Bạch'), quan = find('Quan Lộc'), phu = find('Phu Thê'), tat = find('Tật Ách'), di = find('Thiên Di');
+
+      // chủ đề xuyên suốt = 3 danh từ từ chính tinh Mệnh
+      var themeWords = majors(ming).map(function (s) { return starKw(s).split('—')[0].split(',')[0].trim().split(' ').slice(0, 3).join(' '); }).filter(Boolean).slice(0, 3);
+
+      /* I. Tổng luận bản mệnh */
+      var banMenh = '';
+      majors(ming).forEach(function (s) {
+        banMenh += '⭐ ' + s.name + ' ' + (s.brightness || '') + (s.sihua ? ' · ' + s.sihua : '') + '\n';
+        banMenh += 'Bản chất: ' + starKw(s) + '\n';
+        var dom = domTxt(s, ming);
+        if (dom) banMenh += 'Luận cung Mệnh: ' + dom.split('\n')[0] + '\n';
+        var act = ((D.STAR_ACTION || {})[s.name]) || {};
+        if (act.avoid && act.avoid.length) banMenh += 'Điểm cần lưu ý: ' + act.avoid.slice(0, 2).join('; ') + '.\n';
+      });
+      if (shen && shen !== ming) {
+        banMenh += '\nTHÂN CƯ ' + shen.name + ': ' + majors(shen).map(function (s) { return s.name + ' ' + (s.brightness || ''); }).join(' + ') + ' — hậu vận nghiêng về chủ đề ' + shen.name + '. ';
+        var sd = majors(shen).map(function (s) { return domTxt(s, shen).split('.')[0]; }).filter(Boolean).join('; ');
+        if (sd) banMenh += sd + '.';
+      }
+
+      /* II. Luận 12 cung */
+      var palaces12 = [];
+      var ORDER = ['Mệnh', 'Phụ Mẫu', 'Phúc Đức', 'Điền Trạch', 'Quan Lộc', 'Nô Bộc', 'Thiên Di', 'Tật Ách', 'Tài Bạch', 'Tử Tức', 'Phu Thê', 'Huynh Đệ'];
+      ORDER.forEach(function (nm, i) {
+        var p = find(nm);
+        if (!p) return;
+        var ms = majors(p);
+        var act = (D.PALACE_ACTION || {})[nm] || {};
+        var ki = PALACE_INFO[p.rawName] || PALACE_INFO[nm] || {};
+        var tr = ms.length ? ms.map(function (s) { return s.name + ' ' + (s.brightness || ''); }).join(' + ') : 'không chính tinh — mượn đối cung';
+        var deep = (D.PALACE_DEEP || {})[nm] || '';
+        var starLines = ms.map(function (s) {
+          var l = s.name + (s.brightness ? ' (' + s.brightness + ')' : '') + (s.sihua ? ' · ' + s.sihua : '') + ': ';
+          var dt = domTxt(s, p);
+          l += dt ? dt.split('.')[0] : starKw(s);
+          return l;
+        });
+        palaces12.push({
+          idx: i + 1, name: nm, branch: p.stem + ' ' + p.branch,
+          trongTam: tr, kw: ki.kw || '',
+          starLines: starLines,
+          nen: (act.should || []).slice(0, 4),
+          tranh: (act.avoid || []).slice(0, 4),
+          nghe: act.career || '', sk: act.health || '',
+          deep: deep
+        });
+      });
+
+      /* III. Sự nghiệp & tài bạch */
+      var snTb = 'Quan Lộc (' + (quan ? quan.stem + ' ' + quan.branch : '?') + '): ' +
+        (quan ? majors(quan).map(function (s) { return s.name + ' → ' + (domTxt(s, quan) || starKw(s)).split('.')[0]; }).join('; ') : '—') + '.\n' +
+        'Tài Bạch (' + (tai ? tai.stem + ' ' + tai.branch : '?') + '): ' +
+        (tai ? majors(tai).map(function (s) { return s.name + ' → ' + (domTxt(s, tai) || starKw(s)).split('.')[0]; }).join('; ') : '—') + '.';
+      var qAct = (D.PALACE_ACTION || {})['Quan Lộc'] || {};
+      var tAct = (D.PALACE_ACTION || {})['Tài Bạch'] || {};
+      if (qAct.career) snTb += '\nNghề hợp: ' + qAct.career;
+      if (tAct.finance || qAct.timing) snTb += '\n' + [tAct.finance ? 'Tài chính: ' + tAct.finance : '', qAct.timing ? 'Thời điểm: ' + qAct.timing : ''].filter(Boolean).join('\n');
+
+      /* IV. Cách cục — đủ 5 phần */
+      var patsAll = [];
+      if (ZP && ZP.matchPalace) {
+        ps.forEach(function (pp) {
+          (ZP.matchPalace(pp, ps, chartObj) || []).forEach(function (x) {
+            patsAll.push({ palace: pp.name, name: x.name, level: lvName[x.level] || x.level, desc: x.desc });
+          });
+        });
+      }
+
+      /* V. Tam phương — 4 nhóm quan hệ */
+      var tamGroups = [
+        { label: 'Mệnh – Tài – Quan', names: ['Mệnh', 'Tài Bạch', 'Quan Lộc'], note: 'năng lực, tiền bạc, công danh' },
+        { label: 'Mệnh – Phúc – Di', names: ['Mệnh', 'Phúc Đức', 'Thiên Di'], note: 'nội lực, phúc nền, môi trường xã hội' },
+        { label: 'Phu – Quan – Di', names: ['Phu Thê', 'Quan Lộc', 'Thiên Di'], note: 'hôn nhân, sự nghiệp, quan hệ' },
+        { label: 'Tài – Điền – Phúc', names: ['Tài Bạch', 'Điền Trạch', 'Phúc Đức'], note: 'thu nhập, tài sản, tích lũy' }
+      ];
+      var tamBlocks = tamGroups.map(function (g) {
+        var rows = g.names.map(function (n) {
+          var pp = find(n);
+          return pp ? n + ' ' + (pp.stem + ' ' + pp.branch) + ': ' + (majors(pp).map(function (s) { return s.name + (s.brightness ? ' ' + s.brightness : ''); }).join('+') || 'không chính tinh') : n + ': —';
+        });
+        return { label: g.label, note: g.note, rows: rows };
+      });
+
+      /* VI. Đại vận — timeline theo cung */
+      var daiVan = [];
+      var LABELS = [[0, 10, 'Thời thơ ấu'], [11, 20, 'Học tập và trưởng thành'], [21, 30, 'Khởi nghiệp và định hướng'], [31, 40, 'Phát triển sự nghiệp'], [41, 50, 'Tích lũy và ổn định'], [51, 60, 'Gia đình và hậu vận'], [61, 110, 'Giai đoạn về sau']];
+      LABELS.forEach(function (g) {
+        var pp = ps.filter(function (x) { return x.decadal && x.decadal[0] <= g[1] && x.decadal[1] >= g[0]; })[0];
+        var ki2 = pp ? (PALACE_INFO[pp.rawName] || PALACE_INFO[pp.name] || {}) : {};
+        daiVan.push({
+          range: g[0] + '–' + (g[1] > 100 ? '+' : g[1]) + ' tuổi',
+          label: g[2],
+          palace: pp ? pp.name : '—',
+          stars: pp ? majors(pp).map(function (s) { return s.name; }).join(', ') : '',
+          note: ki2.kw || ''
+        });
+      });
+
+      /* VII. Tổng kết — bảng kết luận */
+      var goodPalace = function (p) { return p && majors(p).some(function (s) { return s.brightness === 'Miếu' || s.brightness === 'Vượng' || s.brightness === 'Đắc'; }); };
+      var warnPalace = function (p) { return p && majors(p).some(function (s) { return s.brightness === 'Hãm' || s.brightness === 'Bất' || s.sihua === 'Hóa Kỵ'; }); };
+      var verdict = function (p, goodTxt, warnTxt, midTxt) {
+        return goodPalace(p) ? goodTxt : warnPalace(p) ? warnTxt : midTxt;
+      };
+      var tongKet = [
+        ['Bản chất mệnh cách', majors(ming).map(function (s) { return s.name; }).join('+') || 'cung không chính tinh'],
+        ['Năng lực nổi bật', verdict(ming, majors(ming).map(function (s) { return starKw(s).split('—')[0].trim(); }).join(', '), 'cần tu sửa sao hãm/kỵ', 'nền tảng vừa, cần phát huy chủ động')],
+        ['Sự nghiệp', verdict(quan, 'thuận — ' + majors(quan).map(function (s) { return s.name; }).join('+'), 'nhiều trắc trở, cần kiên trì', 'vừa — chọn nghề đúng mới thành')],
+        ['Tài vận', verdict(tai, 'tốt — ' + majors(tai).map(function (s) { return s.name; }).join('+'), 'tiền khó giữ, cần kỹ luật', 'trung bình — tích lũy chậm mà chắc')],
+        ['Hôn nhân', verdict(phu, 'có duyên tốt — ' + majors(phu).map(function (s) { return s.name; }).join('+'), 'hay giằng co, cần nhường nhịn', 'vừa — kết hôn không quá sớm')],
+        ['Hậu vận', shen && shen !== ming ? 'nghiêng về ' + shen.name + ' (' + majors(shen).map(function (s) { return s.name; }).join('+') + ')' : 'theo Mệnh'],
+        ['Điểm cần hóa giải', warnPalace(ming) || warnPalace(tai) || warnPalace(phu) ? 'sao hãm/kỵ tại các cung chính — tu tập, tránh mạo hiểm' : 'ít sao khắc — giữ đức hạnh là đủ']
+      ];
+
+      return {
+        zodiac: chartObj.zodiac, juName: chartObj.juName || chartObj.fiveElementsClass || '',
+        gender: /nam|男/i.test(chartObj.gender || '') ? 'Nam mạng' : /nữ|女|nu/i.test(chartObj.gender || '') ? 'Nữ mạng' : (chartObj.gender === 'male' ? 'Nam mạng' : chartObj.gender === 'female' ? 'Nữ mạng' : chartObj.gender),
+        mingStars: majors(ming).map(function (s) { return s.name + (s.brightness ? ' ' + s.brightness : '') + (s.sihua ? ' · ' + s.sihua : ''); }).join(' + ') || '—',
+        mingBranch: ming ? ming.branch : '?', shenName: shen ? shen.name : '?',
+        shenStars: shen ? majors(shen).map(function (s) { return s.name; }).join(' + ') : '',
+        theme: themeWords.join(' – '),
+        banMenh: banMenh, palaces12: palaces12, snTb: snTb,
+        patsAll: patsAll, tamBlocks: tamBlocks, daiVan: daiVan, tongKet: tongKet
+      };
+    },
     chartSummary: function (chartObj) {
       if (!chartObj) return '';
       var T = window.ZiweiTexts || {};
