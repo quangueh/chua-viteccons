@@ -62,8 +62,54 @@ const GEO = {
   shoe: new THREE.SphereGeometry(0.10, 12, 8),
   mat: new THREE.BoxGeometry(1.15, 0.055, 0.82),
   matTrim: new THREE.BoxGeometry(1.21, 0.04, 0.88),
-  logoPlane: new THREE.PlaneGeometry(0.34, 0.20)
+  logoPlane: new THREE.PlaneGeometry(0.34, 0.20),
+  facePlane: new THREE.PlaneGeometry(0.30, 0.26)
 };
+
+// ---- face texture: vẽ mặt chibi trên canvas (mắt to, mũi nhỏ, miệng, má hồng)
+const faceTexCache = new Map();
+function getFaceTexture(variant = 0) {
+  const key = 'f' + variant;
+  if (faceTexCache.has(key)) return faceTexCache.get(key);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 220;
+  const g = c.getContext('2d');
+  const eye = (cx, flip) => {
+    g.fillStyle = '#fff'; g.beginPath(); g.ellipse(cx, 88, 26, 34, 0, 0, 7); g.fill();
+    g.fillStyle = '#241812'; g.beginPath(); g.ellipse(cx + (flip ? -4 : 4), 92, 15, 21, 0, 0, 7); g.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.ellipse(cx + (flip ? -9 : 9), 84, 5, 7, 0, 0, 7); g.fill();
+  };
+  eye(78, true); eye(178, false);
+  // lông mày
+  g.strokeStyle = '#3a2418'; g.lineWidth = 7; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(54, 52); g.quadraticCurveTo(78, 40, 102, 50); g.stroke();
+  g.beginPath(); g.moveTo(154, 50); g.quadraticCurveTo(178, 40, 202, 52); g.stroke();
+  if (variant === 1) { // nữ: lông mi
+    g.lineWidth = 4;
+    for (const sx of [-1, 1]) {
+      g.beginPath(); g.moveTo(78 + sx * 26, 76); g.lineTo(78 + sx * 34, 70); g.stroke();
+      g.beginPath(); g.moveTo(178 + sx * 26, 76); g.lineTo(178 + sx * 34, 70); g.stroke();
+    }
+  }
+  // mũi nhỏ
+  g.strokeStyle = '#c78a5e'; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(128, 118); g.quadraticCurveTo(124, 126, 128, 130); g.stroke();
+  // miệng
+  g.strokeStyle = '#8a3a28'; g.lineWidth = 6;
+  g.beginPath();
+  if (variant === 2) g.moveTo(112, 148), g.quadraticCurveTo(128, 164, 144, 148); // cười to
+  else if (variant === 1) g.moveTo(114, 152), g.quadraticCurveTo(128, 160, 142, 152); // mỉm
+  else g.moveTo(116, 152), g.quadraticCurveTo(128, 158, 140, 152);
+  g.stroke();
+  // má hồng
+  g.fillStyle = 'rgba(240,120,90,.5)';
+  g.beginPath(); g.ellipse(52, 132, 17, 11, 0, 0, 7); g.fill();
+  g.beginPath(); g.ellipse(204, 132, 17, 11, 0, 0, 7); g.fill();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  faceTexCache.set(key, tex);
+  return tex;
+}
 
 let logoTex = null;
 function getLogoTexture() {
@@ -108,7 +154,7 @@ function blobShadow(radius = 0.62, opacity = 0.5) {
  * Nhân vật chibi quay lưng. Gốc group đặt tại mặt đất (y=0).
  * sitting=true: ngồi bắt chéo; false: đứng (đi bộ).
  */
-export function makeDevotee({ hat = 'white', sitting = true } = {}) {
+export function makeDevotee({ hat = 'white', sitting = true, face = -1 } = {}) {
   const group = new THREE.Group();
   const hatCol = hat === 'green' ? COL.hatGreen : COL.hatWhite;
   const hatMat = M(hatCol, { roughness: 0.22, metalness: 0.06 });
@@ -190,12 +236,31 @@ export function makeDevotee({ hat = 'white', sitting = true } = {}) {
   head.position.y = 0.66;
   hip.add(head);
 
+  // đầu = da mặt; tóc là khối riêng đẩy lùi ra sau (mặt trốn trước lộ ra)
+  const faceV = face >= 0 ? face : Math.floor(Math.random() * 3);
+  const skinHead = new THREE.Mesh(GEO.head, M(COL.skin, { roughness: 0.6 }));
+  skinHead.scale.set(0.98, 0.95, 0.98);
   const hair = new THREE.Mesh(GEO.head, M(COL.hair));
-  hair.scale.set(1, 0.95, 1);
+  hair.scale.set(1.02, 0.98, 1.02);
+  hair.position.set(0, 0.045, 0.045); // tóc đẩy về phía sau → mặt trước lộ da
   const hairHi = new THREE.Mesh(GEO.hairTop, M(0x3e2c22));
   hairHi.scale.set(0.85, 0.8, 0.85);
-  hairHi.position.set(-0.05, 0.05, 0.02);
-  head.add(hair, hairHi);
+  hairHi.position.set(-0.05, 0.06, 0.07);
+  head.add(skinHead, hair, hairHi);
+  // bím/tóc nữ (variant 1)
+  if (faceV === 1) {
+    const bun = new THREE.Mesh(GEO.ear, M(COL.hair));
+    bun.scale.set(2.6, 3.6, 2.4);
+    bun.position.set(0, -0.22, 0.24);
+    head.add(bun);
+  }
+  // mặt: plane texture chibi ở phía trước đầu (-z, hướng Phật)
+  const faceMesh = new THREE.Mesh(GEO.facePlane, new THREE.MeshBasicMaterial({
+    map: getFaceTexture(faceV), transparent: true, depthWrite: false
+  }));
+  faceMesh.position.set(0, -0.045, -0.232);
+  faceMesh.rotation.x = 0.06;
+  head.add(faceMesh);
   for (const sx of [-1, 1]) {
     const ear = new THREE.Mesh(GEO.ear, M(COL.skin));
     ear.position.set(sx * 0.245, -0.02, 0.02);
