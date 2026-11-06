@@ -2131,9 +2131,12 @@ import { makeDevotee } from './chars3d.js';
       d.group.scale.y = 1 + Math.sin(t * 1.4 + ph) * 0.008;
       d.head.rotation.z = Math.sin(t * 0.6 + ph) * 0.03;
       d.head.rotation.x = Math.sin(t * 0.8 + ph * 1.3) * 0.02;
-      if (d.faceParts) { // chớp mắt mỗi ~4s, lệch pha từng người
-        const blink = (t + ph) % 4.2 > 4.05 ? 0.08 : 1;
-        for (const lid of d.faceParts.lids) lid.scale.y = blink;
+      if (d.faceParts && d.faceParts.mat) { // chớp mắt: đổi texture mắt nhắm ~0.15s
+        const closed = (t + ph) % 4.2 > 4.05;
+        if (d.faceParts.mat.userData.c !== closed) {
+          d.faceParts.mat.userData.c = closed;
+          d.faceParts.mat.map = closed ? d.faceParts.closed : d.faceParts.open;
+        }
       }
     }
 

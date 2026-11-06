@@ -65,17 +65,135 @@ const GEO = {
   logoPlane: new THREE.PlaneGeometry(0.34, 0.20),
   neck: new THREE.CylinderGeometry(0.075, 0.095, 0.16, 12),
   jaw: new THREE.SphereGeometry(0.155, 18, 14),
-  eyeWhite: new THREE.SphereGeometry(0.033, 14, 12),
-  iris: new THREE.SphereGeometry(0.0165, 12, 10),
-  eyeHi: new THREE.SphereGeometry(0.007, 8, 6),
-  brow: new THREE.BoxGeometry(0.078, 0.013, 0.012),
-  nose: new THREE.ConeGeometry(0.022, 0.055, 10),
   noseTip: new THREE.SphereGeometry(0.019, 10, 8),
-  lip: new THREE.TorusGeometry(0.043, 0.0105, 8, 20, Math.PI),
-  blush: new THREE.SphereGeometry(0.026, 10, 8),
+  faceShell: new THREE.SphereGeometry(0.242, 40, 32, Math.PI * 1.5 - 1.15, 2.3, 0.55, 1.85),
   fringe: new THREE.SphereGeometry(0.212, 26, 12, 0, Math.PI * 2, Math.PI * 0.30, Math.PI * 0.30),
   sideHair: new THREE.CapsuleGeometry(0.030, 0.11, 4, 8)
 };
+
+// ---- vẽ khuôn mặt trên canvas: mắt hạnh nhân có tròng/lông mi,
+// mày cong, mũi nhỏ, môi đỏ — phong cách semi-real dễ nhìn ----
+const faceCache = new Map();
+function getFaceTexture(variant, closed) {
+  const key = `${variant}|${closed ? 1 : 0}`;
+  if (faceCache.has(key)) return faceCache.get(key);
+  const c = document.createElement('canvas');
+  c.width = c.height = 512;
+  const g = c.getContext('2d');
+  const eyeY = 236, eyeDX = 92, eyeW = 46, eyeH = 34;
+  for (const s of [-1, 1]) {
+    const cx = 256 + s * eyeDX;
+    if (closed) {
+      // mắt nhắm: đường mi cong xuống + lông mi
+      g.strokeStyle = '#3a2018'; g.lineWidth = 7; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(cx - eyeW * 0.9, eyeY - 4);
+      g.quadraticCurveTo(cx, eyeY + 16, cx + eyeW * 0.9, eyeY - 4); g.stroke();
+      g.lineWidth = 4;
+      for (const fx of [-0.5, 0, 0.5]) {
+        g.beginPath(); g.moveTo(cx + fx * eyeW, eyeY + 7);
+        g.lineTo(cx + fx * eyeW, eyeY + 14); g.stroke();
+      }
+      continue;
+    }
+    // tròng trắng hình hạnh nhân
+    g.fillStyle = '#fdfdfd';
+    g.beginPath();
+    g.moveTo(cx - eyeW, eyeY);
+    g.quadraticCurveTo(cx - eyeW * 0.5, eyeY - eyeH, cx, eyeY - eyeH);
+    g.quadraticCurveTo(cx + eyeW * 0.6, eyeY - eyeH, cx + eyeW, eyeY);
+    g.quadraticCurveTo(cx + eyeW * 0.5, eyeY + eyeH * 0.75, cx, eyeY + eyeH * 0.75);
+    g.quadraticCurveTo(cx - eyeW * 0.6, eyeY + eyeH * 0.75, cx - eyeW, eyeY);
+    g.fill();
+    // mống mắt nâu gradient
+    const ig = g.createRadialGradient(cx, eyeY - 4, 2, cx, eyeY - 4, eyeW * 0.62);
+    ig.addColorStop(0, '#c8842a'); ig.addColorStop(0.55, '#7a4a1e'); ig.addColorStop(1, '#3a2010');
+    g.fillStyle = ig;
+    g.beginPath(); g.ellipse(cx, eyeY - 2, eyeW * 0.58, eyeH * 0.78, 0, 0, 7); g.fill();
+    g.fillStyle = '#160c08';
+    g.beginPath(); g.ellipse(cx, eyeY - 2, eyeW * 0.24, eyeH * 0.36, 0, 0, 7); g.fill();
+    // điểm sáng
+    g.fillStyle = 'rgba(255,255,255,.95)';
+    g.beginPath(); g.ellipse(cx - eyeW * 0.18, eyeY - eyeH * 0.4, eyeW * 0.16, eyeH * 0.18, 0, 0, 7); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.55)';
+    g.beginPath(); g.ellipse(cx + eyeW * 0.2, eyeY + eyeH * 0.28, eyeW * 0.09, eyeH * 0.1, 0, 0, 7); g.fill();
+    // mi trên dày, hơi xếch ngoài
+    g.strokeStyle = '#241008'; g.lineWidth = 8; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(cx - eyeW * 0.95, eyeY + 2);
+    g.quadraticCurveTo(cx - eyeW * 0.4, eyeY - eyeH - 6, cx, eyeY - eyeH - 4);
+    g.quadraticCurveTo(cx + eyeW * 0.7, eyeY - eyeH - 6, cx + eyeW * 1.08, eyeY - 8); g.stroke();
+    if (variant === 1) { // nữ: lông mi xoè
+      g.lineWidth = 5;
+      for (const f of [0, 1, 2]) {
+        g.beginPath();
+        g.moveTo(cx + s * eyeW * (0.7 + f * 0.18), eyeY - 8 + f * 3);
+        g.lineTo(cx + s * eyeW * (1.05 + f * 0.22), eyeY - 16 + f * 4); g.stroke();
+      }
+    }
+    // mi dưới mỏng
+    g.strokeStyle = 'rgba(60,30,16,.7)'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(cx - eyeW * 0.6, eyeY + eyeH * 0.72);
+    g.quadraticCurveTo(cx, eyeY + eyeH * 0.95, cx + eyeW * 0.6, eyeY + eyeH * 0.72); g.stroke();
+    // nếp mí
+    g.strokeStyle = 'rgba(120,70,40,.45)'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(cx - eyeW * 0.8, eyeY - eyeH - 14);
+    g.quadraticCurveTo(cx, eyeY - eyeH - 24, cx + eyeW * 0.8, eyeY - eyeH - 14); g.stroke();
+  }
+  // lông mày cong
+  for (const s of [-1, 1]) {
+    const bx = 256 + s * 95;
+    g.strokeStyle = variant === 1 ? '#4a2c1a' : '#2e1a10';
+    g.lineWidth = variant === 1 ? 8 : 11;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(bx - s * 38, 186);
+    g.quadraticCurveTo(bx - s * 8, 168, bx + s * 40, 176);
+    g.stroke();
+  }
+  // mũi: bóng sống + cánh nhỏ + điểm sáng chóp
+  g.strokeStyle = 'rgba(150,85,50,.5)'; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(256, 268); g.quadraticCurveTo(252, 288, 250, 296); g.stroke();
+  g.beginPath(); g.moveTo(247, 300); g.quadraticCurveTo(256, 304, 265, 300); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.4)';
+  g.beginPath(); g.ellipse(256, 296, 7, 4, 0, 0, 7); g.fill();
+  // môi
+  const lipY = 352;
+  if (variant === 2) { // cười mở
+    g.fillStyle = '#7a2e22';
+    g.beginPath();
+    g.moveTo(256 - 34, lipY - 4);
+    g.quadraticCurveTo(256, lipY + 30, 256 + 34, lipY - 4);
+    g.quadraticCurveTo(256, lipY + 12, 256 - 34, lipY - 4);
+    g.fill();
+    g.strokeStyle = '#8a3226'; g.lineWidth = 4;
+    g.beginPath(); g.moveTo(256 - 34, lipY - 4);
+    g.quadraticCurveTo(256, lipY + 12, 256 + 34, lipY - 4); g.stroke();
+  } else {
+    const lg = g.createLinearGradient(0, lipY - 10, 0, lipY + 26);
+    lg.addColorStop(0, '#c85a48'); lg.addColorStop(1, '#e8907a');
+    g.fillStyle = lg;
+    g.beginPath();
+    g.moveTo(256 - 30, lipY);
+    g.quadraticCurveTo(256, lipY + 8, 256 + 30, lipY);
+    g.quadraticCurveTo(256, lipY + 34, 256 - 30, lipY);
+    g.fill();
+    g.strokeStyle = '#8a3226'; g.lineWidth = 4;
+    g.beginPath(); g.moveTo(256 - 30, lipY);
+    g.quadraticCurveTo(256, lipY + 8, 256 + 30, lipY); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.35)';
+    g.beginPath(); g.ellipse(256, lipY + 16, 12, 4, 0, 0, 7); g.fill();
+  }
+  // má hồng mờ
+  for (const s of [-1, 1]) {
+    const bg = g.createRadialGradient(256 + s * 140, 305, 4, 256 + s * 140, 305, 40);
+    bg.addColorStop(0, 'rgba(240,110,90,.4)'); bg.addColorStop(1, 'rgba(240,110,90,0)');
+    g.fillStyle = bg;
+    g.beginPath(); g.ellipse(256 + s * 140, 305, 42, 26, 0, 0, 7); g.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  faceCache.set(key, tex);
+  return tex;
+}
 
 let logoTex = null;
 function getLogoTexture() {
@@ -246,31 +364,24 @@ export function makeDevotee({ hat = 'white', sitting = true, face = -1 } = {}) {
     }
   }
 
-  // ---- mặt 3D thật: mắt lồi có tròng, lông mày, mũi, môi, má hồng ----
-  const faceParts = { lids: [] };
+  // vo mat cong om theo so + texture ve
+  const faceMat = new THREE.MeshStandardMaterial({
+    map: getFaceTexture(faceV, false),
+    transparent: true, roughness: 0.55, depthWrite: false
+  });
+  const shell = new THREE.Mesh(GEO.faceShell, faceMat);
+  shell.scale.set(0.97, 1.02, 0.96);
+  head.add(shell);
+  const faceParts = {
+    mat: faceMat,
+    open: getFaceTexture(faceV, false),
+    closed: getFaceTexture(faceV, true)
+  };
+  const noseTip = new THREE.Mesh(GEO.noseTip, skin);
+  noseTip.scale.set(0.9, 0.6, 0.6);
+  noseTip.position.set(0, -0.02, -0.242);
+  head.add(noseTip);
   for (const sx of [-1, 1]) {
-    const eyeG = new THREE.Group();            // nhóm mắt để chớp
-    eyeG.position.set(sx * 0.088, -0.015, -0.205);
-    const white = new THREE.Mesh(GEO.eyeWhite, M(0xffffff, { roughness: 0.25 }));
-    white.scale.set(0.9, 1.0, 0.5);
-    const iris = new THREE.Mesh(GEO.iris, M(faceV === 2 ? 0x3a2418 : 0x1e1210, { roughness: 0.2 }));
-    iris.position.set(0, -0.002, -0.024);
-    const hi = new THREE.Mesh(GEO.eyeHi, M(0xffffff));
-    hi.position.set(sx * -0.005, 0.008, -0.032);
-    eyeG.add(white, iris, hi);
-    head.add(eyeG);
-    faceParts.lids.push(eyeG);
-    const brow = new THREE.Mesh(GEO.brow, M(COL.hair));
-    brow.position.set(sx * 0.09, 0.062, -0.215);
-    brow.rotation.z = sx * (faceV === 1 ? -0.18 : -0.10); // nữ cong hơn
-    brow.rotation.x = -0.15;
-    head.add(brow);
-    const cheek = new THREE.Mesh(GEO.blush, new THREE.MeshStandardMaterial({
-      color: 0xe88a70, roughness: 1, transparent: true, opacity: 0.32
-    }));
-    cheek.scale.set(1, 0.7, 0.35);
-    cheek.position.set(sx * 0.125, -0.085, -0.185);
-    head.add(cheek);
     const ear = new THREE.Mesh(GEO.ear, skin);
     ear.scale.set(0.8, 1.1, 0.55);
     ear.position.set(sx * 0.232, -0.03, -0.01);
@@ -280,18 +391,6 @@ export function makeDevotee({ hat = 'white', sitting = true, face = -1 } = {}) {
     earIn.position.set(sx * 0.236, -0.03, -0.028);
     head.add(earIn);
   }
-  const nose = new THREE.Mesh(GEO.nose, skin);
-  nose.rotation.x = Math.PI / 2 + 0.35;        // chóp nghiêng xuống
-  nose.position.set(0, -0.075, -0.235);
-  const noseTip = new THREE.Mesh(GEO.noseTip, skin);
-  noseTip.scale.set(1.15, 0.75, 0.9);
-  noseTip.position.set(0, -0.095, -0.245);
-  head.add(nose, noseTip);
-  const lip = new THREE.Mesh(GEO.lip, M(0xa8503a, { roughness: 0.7 }));
-  lip.rotation.x = Math.PI * 0.94;             // nửa torus cong lên = mỉm
-  lip.position.set(0, -0.155, -0.228);
-  lip.scale.set(1, 0.8, 0.9);
-  head.add(lip);
   const dome = new THREE.Mesh(GEO.hatDome, hatMat);
   dome.position.y = 0.10;
   head.add(dome);
