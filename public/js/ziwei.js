@@ -208,14 +208,24 @@
       var ZP = window.ZiweiPatterns;
       var pats = (ZP && ZP.matchPalace) ? (ZP.matchPalace(p, allPalaces, chartObj) || []) : [];
 
-      // 1) Tổng quan — trọng tâm trước: cung + sao + cách cục + việc nên làm đầu tiên
+      // 1) Phán đoán mở đầu — tổng hợp cung + sao + cách cục + hóa thành 1 nhận định dứt khoát
       var ki = PALACE_INFO[p.rawName] || PALACE_INFO[p.name] || { kw: '' };
-      var ov = 'Cung ' + p.name + ' (' + p.stem + ' ' + (typeof p.branch === 'string' ? p.branch : '') + ') — ' + (ki.kw || '');
-      ov += majors.length ? '\nChính tinh: ' + majors.map(function (s) { return s.name + (s.brightness && s.brightness !== 'Bình' ? ' ' + s.brightness : ''); }).join(', ') : '\nCung không chính tinh — chủ đề ' + p.name + ' mượn lực từ cung đối và tam hợp.';
-      if (pats.length) ov += '\nCách cục nổi bật: ' + pats.slice(0, 2).map(function (x) { return x.name; }).join(' · ');
-      var firstAct = ((D.PALACE_ACTION || {})[p.name] || {}).should;
-      if (firstAct && firstAct.length) ov += '\n→ Việc nên làm trước: ' + firstAct[0];
-      sections.push({ h: 'Tổng quan', body: ov, main: true });
+      var LEVEL_VI = { excellent: 'Đại cách ★★★', good: 'Cách tốt ★★', neutral: 'Cách trung ★', caution: 'Cách cần đề phòng ⚠' };
+      var SH_SHORT = { 'Hóa Lộc': 'tài lộc, duyên phận, cơ hội', 'Hóa Quyền': 'quyền lực, chủ động, quyết đoán', 'Hóa Khoa': 'danh tiếng, văn chương, quý nhân', 'Hóa Kỵ': 'trở ngại, nợ nghiệp, phải trả' };
+      var ov = '';
+      if (majors.length) {
+        ov = 'Cung ' + p.name + ' an ' + majors.map(function (s) { return s.name + (s.brightness && s.brightness !== 'Bình' ? ' ' + s.brightness : ''); }).join(' + ') + ' — ';
+        ov += majors.map(function (s) { var st = (T.STAR_INFO || {})[s.name] || {}; return s.name + ' ' + (st.kw || '').split('—')[0].trim(); }).join(' gặp ') + '. ';
+        var si = majors.filter(function (s) { return s.sihua; })[0];
+        if (si) ov += si.name + ' mang ' + si.sihua + ' — ' + (SH_SHORT[si.sihua] || '') + ' chạy thẳng vào ' + p.name + '. ';
+        if (pats.length) ov += 'Đây là cách cục ' + pats.slice(0, 2).map(function (x) { return x.name; }).join(' + ') + ' [' + (LEVEL_VI[pats[0].level] || '') + ']. ';
+        ov += '\n→ Cung này luận về: ' + (ki.kw || '');
+        var firstAct = ((D.PALACE_ACTION || {})[p.name] || {}).should;
+        if (firstAct && firstAct.length) ov += '\n→ Việc nên làm trước: ' + firstAct[0];
+      } else {
+        ov = 'Cung ' + p.name + ' không chính tinh — mượn lực từ cung đối và tam hợp. ' + (ki.kw || '');
+      }
+      sections.push({ h: 'Phán đoán', body: ov, main: true });
 
       // 2) Ý nghĩa cung nền + luận sâu (thu gọn — dài)
       var palaceLong = (T.PALACE_LONG || {})[p.name] || (T.PALACE_LONG || {})[p.rawName] || '';
@@ -242,22 +252,25 @@
         var combo = (T.COMBO_HINTS || {})[s.name] || '';
         var brightTxt = (T.BRIGHT_LONG || {})[s.brightness] || '';
         var sihuaTxt = s.sihua ? ((T.SIHUA_LONG || {})[s.sihua] || '') : '';
-        var body = starLong;
-        if (domainTxt) body += '\n\n' + domainTxt;
-        if (brightTxt) body += '\n\nĐộ sáng: ' + brightTxt + '.';
-        if (sihuaTxt) body += '\n\n' + sihuaTxt + '.';
-        if (combo) body += '\n\nCách cục: ' + combo;
-        // hành động theo sao
         var starAct = ((D.STAR_ACTION || {})[s.name]) || null;
+        var body = '';
+        // bản chất + góc nhìn cung thành đoạn mạch lạc
+        if (starLong) body += starLong;
+        if (domainTxt) body += '\n\nTrong cung ' + p.name + ' — ' + domainTxt;
+        var tail = [];
+        if (brightTxt) tail.push('Sao ' + (s.brightness || '').toLowerCase() + ' địa: ' + brightTxt + '.');
+        if (sihuaTxt) tail.push(s.sihua + ': ' + sihuaTxt + '.');
+        if (combo) tail.push('Cách cục liên quan: ' + combo);
+        if (tail.length) body += '\n\n' + tail.join(' ');
         if (starAct) {
           body += '\n\n══ HÀNH ĐỘNG THEO SAO ' + s.name + ' ══';
-          body += '\n• NÊN: ' + (starAct.should || []).join(' • ');
-          body += '\n• TRÁNH: ' + (starAct.avoid || []).join(' • ');
-          if (starAct.career) body += '\n• NGHỀ: ' + starAct.career;
-          if (starAct.health) body += '\n• SỨC KHỎE: ' + starAct.health;
-          if (starAct.finance) body += '\n• TÀI CHÍNH: ' + starAct.finance;
+          body += '\nNÊN: ' + (starAct.should || []).join(' • ');
+          body += '\nTRÁNH: ' + (starAct.avoid || []).join(' • ');
+          if (starAct.career) body += '\nNGHỀ: ' + starAct.career;
+          if (starAct.health) body += '\nSỨC KHỎE: ' + starAct.health;
+          if (starAct.finance) body += '\nTÀI CHÍNH: ' + starAct.finance;
         }
-        sections.push({ h: s.name + (s.brightness ? ' (' + s.brightness + ')' : '') + (s.sihua ? ' — ' + s.sihua : ''), body: body, main: true });
+        sections.push({ h: '⭐ ' + s.name + (s.brightness ? ' (' + s.brightness + ')' : '') + (s.sihua ? ' — ' + s.sihua : ''), body: body, main: true });
       });
 
       // 4c) Ngũ hành tương quan — hành cung vs hành sao (sinh/khắc)
@@ -340,6 +353,16 @@
       // 9) Lời khuyên
       var advice = (T.PALACE_ADVICE || {})[p.name] || '';
       if (advice) sections.push({ h: 'Lời khuyên', body: advice, sub: true });
+
+      // 10) Lời kết — tổng kết một nhận định dứt khoát như thầy luận
+      if (majors.length) {
+        var st0 = (T.STAR_INFO || {})[majors[0].name] || {};
+        var core = (st0.kw || '').split('—')[0].trim();
+        var tail = 'Tóm lại: ' + p.name + ' của bạn nặng về ' + majors[0].name + (majors[1] ? ' gặp ' + majors[1].name : '') + (core ? ' (' + core + ')' : '') + '. ';
+        if (pats.length) tail += 'Cách ' + pats[0].name + ' là ' + (pats[0].level === 'caution' ? 'trở ngại phải hóa giải bằng đức hạnh và kiên nhẫn' : 'sức mạnh trời ban, hãy phát huy tối đa') + '. ';
+        tail += 'Phần số này ' + (majors.some(function (s) { return s.brightness === 'Hãm' || s.brightness === 'Bất'; }) ? 'có khuyết điểm — nhận rõ rồi mới tu sửa được' : 'có nền tảng tốt — giữ đúng đường là thành công') + '.';
+        sections.push({ h: 'Lời kết', body: tail, main: true });
+      }
 
       return { title: p.name + ' cung — ' + p.stem + ' ' + (typeof p.branch === 'string' ? p.branch : ''), sections: sections };
     },

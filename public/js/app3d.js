@@ -2497,14 +2497,34 @@ import { makeDevotee } from './chars3d.js';
       const det = document.getElementById('zwDetail');
       if (!p || !det) return;
       const tip = ZW.palaceDetail ? ZW.palaceDetail(zwChart, p, zwChart.palaces) : ZW.palaceTip(p);
+      // mini formatter: bullet → li, nhãn NÊN/TRÁNH/NGHỀ... → chip, ══ → divider, → → highlight, ◆ → pattern card
+      const fmtZwBody = (body) => {
+        const esc = escapeHtml(body);
+        let out = '';
+        esc.split(/\n/).forEach((l) => {
+          const t = l.trim();
+          if (!t) { return; }
+          let m;
+          if ((m = t.match(/^══\s*(.*?)\s*══/))) { out += `<div class="zw-hdr2">${m[1]}</div>`; }
+          else if ((m = t.match(/^(NÊN LÀM|NÊN|TRÁNH|NGHỀ PHÙ HỢP|NGHỀ|SỨC KHỎE|TÀI CHÍNH|THỜI ĐIỂM|HÀNH ĐỘNG)[:：]\s*(.*)$/))) {
+            const cls = /TRÁNH/.test(m[1]) ? 'zw-act zw-avoid' : 'zw-act';
+            out += `<div class="${cls}"><b class="zw-act-lb">${m[1]}</b><span>${m[2]}</span></div>`;
+          }
+          else if (t.startsWith('• ')) { out += `<div class="zw-li">${t}</div>`; }
+          else if (t.startsWith('→ ')) { out += `<div class="zw-go">${t}</div>`; }
+          else if (t.startsWith('◆ ')) { out += `<div class="zw-pat">${t}</div>`; }
+          else { out += `<p class="zw-p">${t}</p>`; }
+        });
+        return out;
+      };
       let s = `<div class="zw-detail-title">${escapeHtml(tip.title)}</div>`;
       (tip.sections || [{ h: '', body: tip.body }]).forEach((sec) => {
         if (sec.sub) {
-          if (sec.h) s += `<details class="zw-sub"><summary>${escapeHtml(sec.h)}</summary><div class="zw-sec-b">${escapeHtml(sec.body).replace(/\n/g, '<br>')}</div></details>`;
-          else s += `<div class="zw-sec-b">${escapeHtml(sec.body).replace(/\n/g, '<br>')}</div>`;
+          if (sec.h) s += `<details class="zw-sub"><summary>${escapeHtml(sec.h)}</summary><div class="zw-sec-b">${fmtZwBody(sec.body)}</div></details>`;
+          else s += `<div class="zw-sec-b">${fmtZwBody(sec.body)}</div>`;
         } else {
           if (sec.h) s += `<div class="zw-sec-h">${escapeHtml(sec.h)}</div>`;
-          if (sec.body) s += `<div class="zw-sec-b">${escapeHtml(sec.body).replace(/\n/g, '<br>')}</div>`;
+          if (sec.body) s += `<div class="zw-sec-b">${fmtZwBody(sec.body)}</div>`;
         }
       });
       det.innerHTML = s;
