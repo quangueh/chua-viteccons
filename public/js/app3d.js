@@ -2346,6 +2346,26 @@ import { makeDevotee } from './chars3d.js';
 
     /* ---------- render lá số tử vi 4×4 ---------- */
     const MAJORS = ['Tử Vi', 'Thiên Cơ', 'Thái Dương', 'Vũ Khúc', 'Thiên Đồng', 'Liêm Trinh', 'Thiên Phủ', 'Thái Âm', 'Tham Lang', 'Cự Môn', 'Thiên Tướng', 'Thiên Lương', 'Thất Sát', 'Phá Quân'];
+    // mini formatter dùng chung (detail panel + tổng lá số + tháng)
+    function fmtZwBodyInline(body) {
+      const esc = escapeHtml(body || '');
+      let out = '';
+      esc.split(/\n/).forEach((l) => {
+        const t = l.trim();
+        if (!t) return;
+        let m;
+        if ((m = t.match(/^══\s*(.*?)\s*══/))) { out += `<div class="zw-hdr2">${m[1]}</div>`; }
+        else if ((m = t.match(/^(NÊN LÀM|NÊN|TRÁNH|NGHỀ PHÙ HỢP|NGHỀ|SỨC KHỎE|TÀI CHÍNH|THỜI ĐIỂM|HÀNH ĐỘNG)[:：]\s*(.*)$/))) {
+          const cls = /TRÁNH/.test(m[1]) ? 'zw-act zw-avoid' : 'zw-act';
+          out += `<div class="${cls}"><b class="zw-act-lb">${m[1]}</b><span>${m[2]}</span></div>`;
+        }
+        else if (t.startsWith('• ')) { out += `<div class="zw-li">${t}</div>`; }
+        else if (t.startsWith('→ ')) { out += `<div class="zw-go">${t}</div>`; }
+        else if (t.startsWith('◆ ')) { out += `<div class="zw-pat">${t}</div>`; }
+        else { out += `<p class="zw-p">${t}</p>`; }
+      });
+      return out;
+    }
     function starHtml(s) {
       const isMaj = MAJORS.indexOf(s.name) >= 0;
       const el = (ZW.STAR_EL || {})[s.name] || '';
@@ -2423,9 +2443,10 @@ import { makeDevotee } from './chars3d.js';
         <div>Cục: <b>${escapeHtml(c.juName)}</b> · Tuổi ${escapeHtml(c.zodiac)} · ${escapeHtml(c.sign)}</div>
         <div>Mệnh cung tại <b>${ming ? escapeHtml(ming.branch) + ' (' + escapeHtml(ming.name) + ')' : '?'}</b>${shen && shen !== ming ? ` · Thân cư <b>${escapeHtml(shen.name)}</b>` : ''}</div>
       </div>
+      <details class="zw-sub zw-tong" open><summary>📜 Luận chung cả lá số</summary><div class="zw-sec-b">${fmtZwBodyInline(ZW.chartSummary ? ZW.chartSummary(c) : '')}</div></details>
       <div class="zw-layout">
         <div class="zw-chart-col">${html}</div>
-        <div class="zw-detail" id="zwDetail"><i>👆 Bấm vào một cung trên lá số để xem luận giải chi tiết.</i></div>
+        <div class="zw-detail" id="zwDetail"><i>👆 Bấm vào một cung trên lá số để xem luận riêng chi tiết.</i></div>
       </div>`;
     }
 
@@ -2472,10 +2493,13 @@ import { makeDevotee } from './chars3d.js';
         const lv = hm.month;
         const palace = (lv.palaceNames || [])[0] || '';
         const palaceInfo = palace ? (ZW.PALACE_INFO[palace] || {}) : {};
+        // luận chi tiết từng tháng: cung nhập + tứ hóa tháng + ý nghĩa
+        const muts = (lv.mutagen || []).map((m) => `${m.label}→${escapeHtml(m.star)}`).join(' · ');
+        const thangTxt = `${escapeHtml(palace)}${palaceInfo.kw ? ' — ' + escapeHtml(palaceInfo.kw.split('—')[0].trim()) : ''}${muts ? '<br><small>🌙 ' + muts + '</small>' : ''}`;
         html += `<div class="zen-day-row">
           <span class="d-date">${months[d.getMonth()]} ${d.getFullYear()}</span>
           <span class="d-can">${escapeHtml(lv.stem)} ${escapeHtml(lv.branch)}</span>
-          <span class="d-why">${escapeHtml(palace)}${palaceInfo.kw ? ' — ' + escapeHtml(palaceInfo.kw.split('—')[0].trim()) : ''}</span>
+          <span class="d-why">${thangTxt}</span>
         </div>`;
       }
       html += `<div class="zen-note">* Hạn vận theo lá số thật (engine iztro); chỉ mang tính tham khảo.</div>`;
@@ -2497,34 +2521,14 @@ import { makeDevotee } from './chars3d.js';
       const det = document.getElementById('zwDetail');
       if (!p || !det) return;
       const tip = ZW.palaceDetail ? ZW.palaceDetail(zwChart, p, zwChart.palaces) : ZW.palaceTip(p);
-      // mini formatter: bullet → li, nhãn NÊN/TRÁNH/NGHỀ... → chip, ══ → divider, → → highlight, ◆ → pattern card
-      const fmtZwBody = (body) => {
-        const esc = escapeHtml(body);
-        let out = '';
-        esc.split(/\n/).forEach((l) => {
-          const t = l.trim();
-          if (!t) { return; }
-          let m;
-          if ((m = t.match(/^══\s*(.*?)\s*══/))) { out += `<div class="zw-hdr2">${m[1]}</div>`; }
-          else if ((m = t.match(/^(NÊN LÀM|NÊN|TRÁNH|NGHỀ PHÙ HỢP|NGHỀ|SỨC KHỎE|TÀI CHÍNH|THỜI ĐIỂM|HÀNH ĐỘNG)[:：]\s*(.*)$/))) {
-            const cls = /TRÁNH/.test(m[1]) ? 'zw-act zw-avoid' : 'zw-act';
-            out += `<div class="${cls}"><b class="zw-act-lb">${m[1]}</b><span>${m[2]}</span></div>`;
-          }
-          else if (t.startsWith('• ')) { out += `<div class="zw-li">${t}</div>`; }
-          else if (t.startsWith('→ ')) { out += `<div class="zw-go">${t}</div>`; }
-          else if (t.startsWith('◆ ')) { out += `<div class="zw-pat">${t}</div>`; }
-          else { out += `<p class="zw-p">${t}</p>`; }
-        });
-        return out;
-      };
       let s = `<div class="zw-detail-title">${escapeHtml(tip.title)}</div>`;
       (tip.sections || [{ h: '', body: tip.body }]).forEach((sec) => {
         if (sec.sub) {
-          if (sec.h) s += `<details class="zw-sub"><summary>${escapeHtml(sec.h)}</summary><div class="zw-sec-b">${fmtZwBody(sec.body)}</div></details>`;
-          else s += `<div class="zw-sec-b">${fmtZwBody(sec.body)}</div>`;
+          if (sec.h) s += `<details class="zw-sub"><summary>${escapeHtml(sec.h)}</summary><div class="zw-sec-b">${fmtZwBodyInline(sec.body)}</div></details>`;
+          else s += `<div class="zw-sec-b">${fmtZwBodyInline(sec.body)}</div>`;
         } else {
           if (sec.h) s += `<div class="zw-sec-h">${escapeHtml(sec.h)}</div>`;
-          if (sec.body) s += `<div class="zw-sec-b">${fmtZwBody(sec.body)}</div>`;
+          if (sec.body) s += `<div class="zw-sec-b">${fmtZwBodyInline(sec.body)}</div>`;
         }
       });
       det.innerHTML = s;

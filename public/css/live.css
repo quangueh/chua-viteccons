@@ -3294,4 +3294,5 @@ html.need-name .name-gate-overlay {
 
 .zw-reset {
   background: linear-gradient(180deg, #999, #666) !important;
-}
+}.zen-card.zw-mode .zw-sub.zw-tong { margin: 8px 0 12px; }
+.zen-card.zw-mode .zw-sub.zw-tong > summary { font-size: 14px; color: #8b1a1a; }

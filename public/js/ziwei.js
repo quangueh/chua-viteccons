@@ -387,6 +387,52 @@
       return lines.join('\n');
     },
 
+    /* LUẬN CHUNG CẢ LÁ SỐ — như thầy phán lá số tổng thể trước khi xét từng cung */
+    chartSummary: function (chartObj) {
+      if (!chartObj) return '';
+      var T = window.ZiweiTexts || {};
+      var D = window.ZiweiDeep || {};
+      var ZP = window.ZiweiPatterns;
+      var ps = chartObj.palaces || [];
+      var ming = ps.filter(function (p) { return p.isMing; })[0];
+      var shen = ps.filter(function (p) { return p.isShen || p.isBody; })[0];
+      var majors = ming ? this.majorsOf(ming) : [];
+      var find = function (n) { return ps.filter(function (p) { return p.name === n; })[0]; };
+      var tai = find('Tài Bạch'), quan = find('Quan Lộc'), di = find('Thiên Di'), phu = find('Phu Thê'), tat = find('Tật Ách');
+      var lv = { excellent: 'đại cách', good: 'cách tốt', neutral: 'cách trung', caution: 'cách cần đề phòng' };
+
+      var t = '══ PHÁN ĐOÁN TỔNG LÁ SỐ ══\n';
+      t += 'Người tuổi ' + (chartObj.zodiac || '?') + ', ' + (chartObj.gender === 'female' ? 'nữ' : 'nam') + ' mạng, cục ' + (chartObj.juName || '') + (chartObj.juInfo ? ' (' + chartObj.juInfo.kw + ')' : '') + '. ';
+      t += 'Mệnh an ' + (majors.length ? majors.map(function (s) { return s.name + ' ' + (s.brightness || ''); }).join(' + ') : 'không chính tinh — mượn đối cung') + ' tại cung ' + (ming ? ming.branch : '?') + '. ';
+      if (majors.length) {
+        t += majors.map(function (s) { var st = (T.STAR_INFO || {})[s.name] || {}; var kp = (st.kw || '').split('—'); return s.name + ' là ' + (kp[0] || '').trim() + (kp[1] ? ' — ' + kp[1].trim() : ''); }).join('; ') + '. ';
+      }
+      if (shen && shen !== ming) t += 'Thân cư ' + shen.name + ' — hậu vận nặng về ' + shen.name + '.\n\n';
+
+      // cách cục nổi bật toàn lá
+      if (ZP && ZP.matchPalace) {
+        var allPats = [];
+        ps.forEach(function (pp) { (ZP.matchPalace(pp, ps, chartObj) || []).forEach(function (x) { allPats.push(pp.name + ': ' + x.name + ' [' + (lv[x.level] || '') + ']'); }); });
+        if (allPats.length) t += 'Cách cục trên lá số (' + allPats.length + '):\n' + allPats.slice(0, 8).map(function (x) { return '◆ ' + x; }).join('\n') + '\n\n';
+      }
+
+      // tam phương Mệnh — bộ ba sức mạnh
+      if (ming) {
+        var grp = [[2, 6, 10], [8, 0, 4], [11, 3, 7], [5, 9, 1]].filter(function (g) { return g.indexOf(ming.branchIdx) >= 0; })[0] || [];
+        var tam = grp.filter(function (b) { return b !== ming.branchIdx; }).map(function (b) {
+          var pp = ps.filter(function (x) { return x.branchIdx === b; })[0];
+          return pp ? pp.name + ' (' + (this.majorsOf(pp).map(function (s) { return s.name; }).join('+') || 'không chính tinh') + ')' : '';
+        }, this).filter(Boolean);
+        t += 'Tam phương Mệnh: Mệnh ' + ming.branch + ' chiếu ' + tam.join(' · ') + '. ';
+      }
+      if (tai) t += 'Tài Bạch: ' + (this.majorsOf(tai).map(function (s) { return s.name; }).join('+') || 'không chính tinh') + '. ';
+      if (quan) t += 'Quan Lộc: ' + (this.majorsOf(quan).map(function (s) { return s.name; }).join('+') || 'không chính tinh') + '. ';
+      if (phu) t += 'Phu Thê: ' + (this.majorsOf(phu).map(function (s) { return s.name; }).join('+') || 'không chính tinh') + '. ';
+      if (tat) t += 'Tật Ách: ' + (this.majorsOf(tat).map(function (s) { return s.name; }).join('+') || 'không chính tinh') + '. ';
+      t += '\n\nBấm vào từng cung để xem luận riêng chi tiết — phần Hạn Vận luận từng tháng tương lai.';
+      return t;
+    },
+
     GRID_POS: GRID_POS,
     PALACE_INFO: PALACE_INFO,
     STAR_INFO: STAR_INFO,
