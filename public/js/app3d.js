@@ -2546,8 +2546,8 @@ import { makeDevotee } from './chars3d.js';
     let queData = null;
     function renderQueUI() {
       const CATS = [['chung', 'Câu hỏi chung'], ['duyen', 'Tình duyên / Hôn nhân'], ['tai', 'Tiền bạc / Tài chính'], ['quan', 'Sự nghiệp / Công danh'], ['suckhoe', 'Sức khỏe / Bản thân'], ['con', 'Con cái'], ['cha', 'Gia đình / Nhà cửa'], ['ban', 'Bạn bè / Đối tác']];
-      let h = `<div class="zw-rep"><div class="zw-rep-cover"><div class="zw-rep-kicker">KINH DỊCH · LỤC HÀO NẠP GIÁP</div>` +
-        `<h2 class="zw-rep-h1">GIEO QUẺ HỎI VIỆC</h2><div class="zw-rep-sub">BA ĐỒNG XU · SÁU HÀO · THẾ ỨNG</div>` +
+      let h = `<div class="zw-rep"><div class="que-glass"><div class="zw-rep-kicker" style="color:#a0710a">KINH DỊCH · LỤC HÀO NẠP GIÁP</div>` +
+        `<h2 class="zw-rep-h1" style="color:#8b1a1a;text-shadow:none;font-size:26px">GIEO QUẺ HỎI VIỆC</h2><div class="zw-rep-sub" style="color:#8a7a56">BA ĐỒNG XU · SÁU HÀO · THẾ ỨNG</div>` +
         `<div style="margin:14px auto 0;max-width:520px;text-align:left">` +
         `<input id="queQ" class="zen-input" style="width:100%;margin-bottom:8px" placeholder="Câu hỏi của thí chủ (vd: việc làm sắp tới ra sao?)" value="${escapeHtml(queData ? queData.question : '')}">` +
         `<select id="queCat" class="zen-sel" style="width:100%;margin-bottom:10px">${CATS.map(c => `<option value="${c[0]}"${queData && queData.category === c[0] ? ' selected' : ''}>${c[1]}</option>`).join('')}</select>` +
@@ -2568,7 +2568,7 @@ import { makeDevotee } from './chars3d.js';
           const stage = document.getElementById('queCastStage');
           const HAO_LB = ['Hào Sơ', 'Hào Nhị', 'Hào Tam', 'Hào Tứ', 'Hào Ngũ', 'Hào Lục'];
           const VAL_LB = { 6: 'Lão Âm ✕ động', 7: 'Thiếu Dương', 8: 'Thiếu Âm', 9: 'Lão Dương ○ động' };
-          stage.innerHTML = '<div class="que-casting"><div class="que-coins"><span class="que-coin"><i></i></span><span class="que-coin"><i></i></span><span class="que-coin"><i></i></span></div><div class="que-cline" id="queCLb"></div><div class="que-stack" id="queStack"></div></div>';
+          stage.innerHTML = '<div class="que-casting"><div class="que-coins"><span class="que-coin"><i></i><em></em></span><span class="que-coin"><i></i><em></em></span><span class="que-coin"><i></i><em></em></span></div><div class="que-cline" id="queCLb"></div><div class="que-stack" id="queStack"></div></div>';
           const lb = document.getElementById('queCLb'), stack = document.getElementById('queStack');
           let i = 0;
           const step = () => {
@@ -2577,8 +2577,16 @@ import { makeDevotee } from './chars3d.js';
             const coins = stage.querySelectorAll('.que-coin');
             coins.forEach(c => c.classList.add('shake'));
             setTimeout(() => {
-              coins.forEach(c => c.classList.remove('shake'));
-              lb.textContent = HAO_LB[i] + ': ' + VAL_LB[hao[i]] + ' (' + hao[i] + ')';
+              /* tách tổng thành 3 mặt xu: 3=ngửa, 2=sấp */
+              const v = hao[i], coinsArr = v === 9 ? [3, 3, 3] : v === 6 ? [2, 2, 2] : v === 8 ? [3, 3, 2] : [3, 2, 2];
+              coinsArr.sort(() => Math.random() - .5);
+              coins.forEach((c, k) => {
+                c.classList.remove('shake');
+                c.classList.remove('land-ngua', 'land-sap');
+                c.classList.add(coinsArr[k] === 3 ? 'land-ngua' : 'land-sap');
+                c.querySelector('em').textContent = coinsArr[k] === 3 ? 'ngửa' : 'sấp';
+              });
+              lb.textContent = HAO_LB[i] + ': ' + VAL_LB[v] + ' — ' + coinsArr.join(' + ') + ' = ' + v;
               const yang = hao[i] === 7 || hao[i] === 9;
               const dong = hao[i] === 6 || hao[i] === 9;
               stack.insertAdjacentHTML('afterbegin', `<div class="que-hline ${dong ? 'hdong' : ''}">${yang ? '⚊' : '⚋'} ${dong ? '<i>động</i>' : ''}</div>`);
