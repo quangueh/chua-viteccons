@@ -5,13 +5,17 @@
  * State/nghi thức: window.TempleLocal (standalone.js) | Âm thanh: TempleAudioEngine.
  */
 import * as THREE from '/vendor/three.module.js';
-import { makeDevotee } from './chars3d.js';
+import { makeDevotee, preloadRealDevotee, hasRealDevotee, makeRealDevotee, realDevotees } from './chars3d.js';
+const mkDevotee = (o) => hasRealDevotee() ? makeRealDevotee(o) : makeDevotee(o);
 
 (function () {
   const canvas = document.getElementById('templeCanvas3d');
   const wrapper = document.getElementById('stageWrapper');
   const labelsLayer = document.getElementById('labelsLayer');
   if (!canvas || !wrapper) return;
+
+  // nạp model nhân vật thật (GLB rigged) — chạy nền, fallback primitives nếu lỗi
+  preloadRealDevotee();
 
   // Pháp danh: localStorage = nguồn chính (sống qua F5/đóng mở/in-app webview),
   // sessionStorage giữ tương thích bản cũ — đọc cả hai, ghi cả hai.
@@ -767,7 +771,7 @@ import { makeDevotee } from './chars3d.js';
   function getTraveler() {
     let t = travelers.find((x) => !x.busy);
     if (!t) {
-      t = { char: makeDevotee({ sitting: false }), busy: false, labelEl: addSeatLabel('') };
+      t = { char: mkDevotee({ sitting: false }), busy: false, labelEl: addSeatLabel('') };
       t.char.group.visible = false;
       t.labelEl.classList.add('walker-label');
       scene.add(t.char.group);
@@ -804,6 +808,7 @@ import { makeDevotee } from './chars3d.js';
       if (dist < 0.05) continue;
       const dur = Math.max(0.4, dist / 2.6);
       tl.call(() => faceDir(t.char, wp.x - p.x, wp.z - p.z));
+      if (t.char.real) tl.call(() => t.char.play('Walk'));
       tl.to(p, { x: wp.x, z: wp.z, duration: dur, ease: 'none' });
       tl.to(t.char.legs.l.rotation, { x: 0.55, duration: 0.22, repeat: Math.max(1, Math.floor(dur / 0.44)) - 1, yoyo: true, ease: 'sine.inOut' }, '<');
       tl.to(t.char.legs.r.rotation, { x: -0.55, duration: 0.22, repeat: Math.max(1, Math.floor(dur / 0.44)) - 1, yoyo: true, ease: 'sine.inOut' }, '<');
@@ -811,6 +816,7 @@ import { makeDevotee } from './chars3d.js';
     tl.call(() => {
       t.char.legs.l.rotation.x = 0;
       t.char.legs.r.rotation.x = 0;
+      if (t.char.real) t.char.play('Idle_Neutral');
     });
   }
 
@@ -853,7 +859,7 @@ import { makeDevotee } from './chars3d.js';
       releaseTraveler(t);
       if (sc.status !== 'walking_in') return; // nghi thức/ra về đã chiếm quyền
       // ngồi xuống: đổi sang nhân vật ngồi tại chiếu
-      const dev = makeDevotee({ sitting: true });
+      const dev = mkDevotee({ sitting: true });
       dev.group.position.set(seat.x, 0, seat.z);
       scene.add(dev.group);
       sc.devotee = dev;
@@ -875,7 +881,7 @@ import { makeDevotee } from './chars3d.js';
     const sc = seatChars[idx];
     const seat = SEATS[idx];
     const occ = sc.occupant;
-    if (sc.devotee) { scene.remove(sc.devotee.group); sc.devotee = null; }
+    if (sc.devotee) { scene.remove(sc.devotee.group); sc.devotee.dispose && sc.devotee.dispose(); sc.devotee = null; }
     if (sc.labelEl) { sc.labelEl.remove(); sc.labelEl = null; }
     sc.status = 'leaving';
     const t = getTraveler();
@@ -902,14 +908,14 @@ import { makeDevotee } from './chars3d.js';
   function renderQueue(queue) {
     const q = Array.isArray(queue) ? queue.slice(0, 8) : [];
     while (queueChars.length < q.length) {
-      const c = makeDevotee({ sitting: false });
+      const c = mkDevotee({ sitting: false });
       c.group.scale.setScalar(0.92);
       scene.add(c.group);
       queueChars.push({ char: c, labelEl: addSeatLabel('') });
     }
     while (queueChars.length > q.length) {
       const c = queueChars.pop();
-      scene.remove(c.char.group);
+      scene.remove(c.char.group); c.char.dispose && c.char.dispose();
       c.labelEl.remove();
     }
     q.forEach((m, i) => {
@@ -1183,7 +1189,7 @@ import { makeDevotee } from './chars3d.js';
                 return;
               }
               // chưa kịp ngồi (đang walking_in) → tạo nhân vật ngồi luôn
-              const dev = makeDevotee({ sitting: true });
+              const dev = mkDevotee({ sitting: true });
               dev.group.position.set(seat.x, 0, seat.z);
               scene.add(dev.group);
               sc.devotee = dev;
@@ -2121,14 +2127,18 @@ import { makeDevotee } from './chars3d.js';
   const clock = new THREE.Clock();
   function animate() {
     requestAnimationFrame(animate);
-    const t = clock.getElapsedTime();
+    const dt = Math.min(clock.getDelta(), 0.1);
+    const t = clock.elapsedTime;
+
+    // cập nhật animation cho nhân vật thật (GLB rigged)
+    for (const d of realDevotees) if (d.group.parent) d.mixer.update(dt);
 
     // thở nhẹ + chớp mắt + đầu khẽ động cho đạo tràng (chỉ người đang ngồi)
     let bi = 0;
     for (const sc of seatChars) {
       if (sc.status !== 'seated' || !sc.devotee) continue;
       const d = sc.devotee, ph = bi++ * 1.83;
-      d.group.scale.y = 1 + Math.sin(t * 1.4 + ph) * 0.008;
+      if (!d.real) d.group.scale.y = 1 + Math.sin(t * 1.4 + ph) * 0.008;
       d.head.rotation.z = Math.sin(t * 0.6 + ph) * 0.03;
       d.head.rotation.x = Math.sin(t * 0.8 + ph * 1.3) * 0.02;
       if (d.faceParts && d.faceParts.mat) { // chớp mắt: đổi texture mắt nhắm ~0.15s

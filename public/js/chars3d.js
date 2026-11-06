@@ -8,6 +8,8 @@
  *   hip: group pivot tại khớp hông — xoay hip.rotation.x để đảnh lễ.
  */
 import * as THREE from '/vendor/three.module.js';
+import { GLTFLoader } from '/vendor/GLTFLoader.js';
+import { clone as skeletonClone } from '/vendor/SkeletonUtils.js';
 
 const COL = {
   shirt: 0xf8f5ee,
@@ -428,4 +430,124 @@ export function bowTo(devotee, angle, dur = 0.5, ease = 'power2.inOut') {
   } else {
     devotee.hip.rotation.x = angle;
   }
+}
+
+/* ============================================================================
+ * NHÂN VẬT THẬT — model GLB rigged (Quaternius Worker, CC0):
+ * đúng tỷ lệ người, mặt thật (mắt/mày/ria), mũ công trường + giáp, 24 anim.
+ * makeRealDevotee({ sitting }) -> { group, hip, head, mixer, play, sitting }
+ * ==========================================================================*/
+let realProto = null;
+
+export function preloadRealDevotee(url = '/assets/devotee.glb') {
+  if (realProto) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    new GLTFLoader().load(url,
+      (g) => { realProto = g; resolve(true); },
+      undefined,
+      () => resolve(false));
+  });
+}
+export function hasRealDevotee() { return !!realProto; }
+
+// registry để app3d cập nhật mixer mỗi frame
+export const realDevotees = new Set();
+
+export function makeRealDevotee({ sitting = true } = {}) {
+  const inst = skeletonClone(realProto.scene);
+  const group = new THREE.Group();
+  const hip = new THREE.Group();          // pivot lạy
+  group.add(hip);
+  hip.add(inst);
+
+  // chuẩn hóa chiều cao theo BONE (skinned bounds không tin cậy):
+  // head bone y * ~1.15 ≈ chiều cao đỉnh đầu
+  inst.updateMatrixWorld(true);
+  const headBone0 = inst.getObjectByName('Head');
+  const footBone0 = inst.getObjectByName('Foot.L') || inst.getObjectByName('Hips');
+  const _v = new THREE.Vector3();
+  const headY = headBone0 ? headBone0.getWorldPosition(_v).y : 1;
+  const footY = footBone0 ? footBone0.getWorldPosition(_v).y : 0;
+  const rawH = Math.max(0.01, (headY - footY) * 1.18);
+  const s = 0.95 / rawH;
+  inst.scale.setScalar(s);
+  inst.position.y = -footY * s;             // chân chạm đất
+  inst.rotation.y = Math.PI;                // model mặt +z → quay về -z (hướng Phật)
+
+  // animation
+  const mixer = new THREE.AnimationMixer(inst);
+  const clips = {};
+  for (const a of realProto.animations) clips[a.name.split('|').pop()] = a;
+  let cur = null;
+  const play = (name, fade = 0.25) => {
+    const c = clips[name];
+    if (!c) return null;
+    const next = mixer.clipAction(c);
+    if (cur === next) return next;
+    next.reset().fadeIn(fade).play();
+    if (cur) cur.fadeOut(fade);
+    cur = next;
+    return next;
+  };
+
+  // bones cần dùng
+  const b = (n) => inst.getObjectByName(n);
+  const bones = {
+    hips: b('Hips'), head: b('Head'), chest: b('Chest'),
+    uLegL: b('UpperLeg.L'), lLegL: b('LowerLeg.L'),
+    uLegR: b('UpperLeg.R'), lLegR: b('LowerLeg.R'),
+    footL: b('Foot.L'), footR: b('Foot.R')
+  };
+
+  const d = {
+    group, hip, mixer, play, bones,
+    head: bones.head || inst,
+    legs: { l: { rotation: { x: 0 } }, r: { rotation: { x: 0 } } }, // compat
+    arms: { l: null, r: null },
+    faceParts: null,
+    real: true, sitting,
+    dispose() { realDevotees.delete(d); }
+  };
+  realDevotees.add(d);
+
+  // ngồi xếp bằng trên chiếu: hạ thân xuống — chân chìm dưới sàn (bị chiếu che),
+  // thân trên vẫn Idle thở nhẹ → trông như đang ngồi thiền
+  if (sitting) {
+    hip.position.y = 0.30;
+    inst.position.y -= 0.42;
+    inst.traverse((o) => { if (o.name === 'Worker_Legs' || o.name === 'Worker_Feet') o.visible = false; }); // giấu chân — ngồi xếp
+  }
+
+  // đổi màu mũ sang trắng Viteccons + tô điểm vest (vật liệu share → clone)
+  inst.traverse((o) => {
+    if (!o.isMesh || !o.material) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    o.material = Array.isArray(o.material) ? mats.map((m) => m.clone()) : mats[0].clone();
+    for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
+      if (m.name === 'Worker_Yellow') { m.color.set(0xf8f6f0); m.roughness = 0.35; }
+      if (m.name === 'Worker_Vest') { m.color.set(0xec5a10); }
+    }
+  });
+
+  // chiếu + bóng cho ngồi
+  if (sitting) {
+    const trim = new THREE.Mesh(GEO.matTrim, M(COL.matEdge));
+    trim.position.y = 0.028;
+    const mat = new THREE.Mesh(GEO.mat, M(COL.mat));
+    mat.position.y = 0.055;
+    group.add(trim, mat);
+    inst.position.y += 0.06;
+  }
+  group.add(blobShadow(sitting ? 0.62 : 0.42));
+
+  // logo Viteccons trên lưng — gắn vào hip (world units) chỗ ngang ngực, mặt +z ra sau
+  {
+    const logo = new THREE.Mesh(GEO.logoPlane, new THREE.MeshBasicMaterial({
+      map: getLogoTexture(), transparent: true, opacity: 0.95
+    }));
+    logo.position.set(0, sitting ? 0.22 : 0.52, 0.10);
+    hip.add(logo);
+    d.logo = logo;
+  }
+  return d;
 }
