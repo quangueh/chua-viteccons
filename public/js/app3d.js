@@ -2269,7 +2269,7 @@ import { makeDevotee } from './chars3d.js';
 
     function renderZen(tab) {
       const card = document.querySelector('.zen-card');
-      if (card) card.classList.toggle('zw-mode', tab === 'chart' || tab === 'report');
+      if (card) card.classList.toggle('zw-mode', tab === 'chart' || tab === 'report' || tab === 'que');
       const birth = getBirth();
       if (zenBirth && birth) zenBirth.value = birth;
       let html = '';
@@ -2338,6 +2338,8 @@ import { makeDevotee } from './chars3d.js';
           if (!zwChart) buildZw();
           html += zwChart ? renderZwReport(zwChart) : `<h4>📜 Bản luận giải</h4><p style="color:var(--muted-gold)">Không lập được lá số.</p>`;
         }
+      } else if (tab === 'que') {
+        html += renderQueUI();
       } else if (tab === 'han') {        // ── HẠN VẬN: đại hạn / lưu niên / lưu nguyệt / lưu nhật + 12 tháng tới ──
         const b = getBirthObj();
         if (!b) {
@@ -2538,6 +2540,65 @@ import { makeDevotee } from './chars3d.js';
       h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">VII. TỔNG KẾT LÁ SỐ</h3><table class="zw-rep-tbl">`;
       rep.tongKet.forEach((r) => { h += `<tr><td>${escapeHtml(r[0])}</td><td>${escapeHtml(r[1])}</td></tr>`; });
       h += `</table><p class="zw-p" style="font-size:11px;opacity:.75">Lưu ý: Tử Vi là hệ thống luận đoán truyền thống phục vụ tu tập — tham khảo, không phải dự báo chắc chắn.</p></div></div>`;
+      return h;
+    }
+    /* ---------- Gieo Quẻ Kinh Dịch / Lục Hào Nạp Giáp ---------- */
+    let queData = null;
+    function renderQueUI() {
+      const CATS = [['chung', 'Câu hỏi chung'], ['duyen', 'Tình duyên / Hôn nhân'], ['tai', 'Tiền bạc / Tài chính'], ['quan', 'Sự nghiệp / Công danh'], ['suckhoe', 'Sức khỏe / Bản thân'], ['con', 'Con cái'], ['cha', 'Gia đình / Nhà cửa'], ['ban', 'Bạn bè / Đối tác']];
+      let h = `<div class="zw-rep"><div class="zw-rep-cover"><div class="zw-rep-kicker">KINH DỊCH · LỤC HÀO NẠP GIÁP</div>` +
+        `<h2 class="zw-rep-h1">GIEO QUẺ HỎI VIỆC</h2><div class="zw-rep-sub">BA ĐỒNG XU · SÁU HÀO · THẾ ỨNG</div>` +
+        `<div style="margin:14px auto 0;max-width:520px;text-align:left">` +
+        `<input id="queQ" class="zen-input" style="width:100%;margin-bottom:8px" placeholder="Câu hỏi của thí chủ (vd: việc làm sắp tới ra sao?)" value="${escapeHtml(queData ? queData.question : '')}">` +
+        `<select id="queCat" class="zen-sel" style="width:100%;margin-bottom:10px">${CATS.map(c => `<option value="${c[0]}"${queData && queData.category === c[0] ? ' selected' : ''}>${c[1]}</option>`).join('')}</select>` +
+        `<button class="zen-btn" id="btnQueCast" style="width:100%">🪙 Gieo quẻ (3 đồng xu × 6 lần)</button></div></div>`;
+      if (queData) h += renderQueResult(queData);
+      else h += `<p class="zw-p" style="text-align:center;opacity:.7">Thành tâm nghĩ câu hỏi, rồi gieo. Mỗi lần gieo 3 đồng xu — 6 lần thành 6 hào từ dưới lên.</p>`;
+      h += `</div>`;
+      setTimeout(() => {
+        const btn = document.getElementById('btnQueCast');
+        if (btn) btn.onclick = () => {
+          const q = (document.getElementById('queQ').value || '').trim() || 'việc quan tâm hiện tại';
+          const cat = document.getElementById('queCat').value;
+          const birth = (() => { try { return JSON.parse(localStorage.getItem('chua_vt_birth') || '{}'); } catch (e) { return {}; } })();
+          queData = window.Ich.cast(q, cat, birth.g || '');
+          renderZen('que');
+        };
+      }, 0);
+      return h;
+    }
+    function renderQueResult(q) {
+      const L = window.Ich.luan(q);
+      let h = `<div class="zw-rep-chap"><h3 class="zw-rep-h2">KẾT QUẢ — ${escapeHtml(q.question.toUpperCase())}</h3>`;
+      /* hai quẻ + kết luận */
+      h += `<div class="que-2hex"><div class="que-hex"><span class="que-sym">${window.Ich.hexSym(q.upper.bits, q.lower.bits)}</span>` +
+        `<b>${escapeHtml(q.benName)}</b><i>BẢN QUẺ · cung ${q.cung.name} (${q.cungEl}) · ${escapeHtml(q.genName)}</i></div>`;
+      if (q.dongHao.length) h += `<div class="que-arrow">→</div><div class="que-hex"><span class="que-sym">${window.Ich.hexSym(q.bienUpper.bits, q.bienLower.bits)}</span>` +
+        `<b>${escapeHtml(q.bienName)}</b><i>BIẾN QUẺ · ${q.dongHao.length} hào động</i></div>`;
+      else h += `<div class="que-arrow">·</div><div class="que-hex"><span class="que-sym">靜</span><b>Sáu hào tĩnh</b><i>việc ổn định ít biến</i></div>`;
+      h += `</div>`;
+      h += `<div class="que-verdict">${escapeHtml(L.ketLuan)}</div></div>`;
+      /* bàn quẻ lục hào — hào 6 trên, hào 1 dưới */
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">BÀN LỤC HÀO</h3><table class="que-tbl"><tr><th>Hào</th><th>Quẻ</th><th>Lục Thân</th><th>Nạp Giáp</th><th>Động</th><th>Vị trí</th><th>Nhật/Nguyệt</th></tr>`;
+      for (let i = 5; i >= 0; i--) {
+        const r = q.rows[i];
+        h += `<tr class="${r.dong ? 'que-dong' : ''}"><td>${['Sơ', 'Nhị', 'Tam', 'Tứ', 'Ngũ', 'Lục'][i]}</td>` +
+          `<td class="que-line">${r.yang ? '⚊' : '⚋'}</td><td><b>${r.lt}</b></td><td>${r.najia} <i>(${r.el})</i></td>` +
+          `<td>${r.dong ? '✕ ĐỘNG' : '—'}</td><td>${r.isThe ? '<b class="que-the">THẾ</b>' : r.isUng ? '<b class="que-ung">ỨNG</b>' : ''}</td>` +
+          `<td>${[r.vsDay ? 'Nhật ' + r.vsDay : '', r.vsMonth ? 'Nguyệt ' + r.vsMonth : '', r.khong ? '<b class="que-khong">Không</b>' : ''].filter(Boolean).join(' · ') || '—'}</td></tr>`;
+      }
+      h += `</table><p class="zw-p" style="font-size:11px;opacity:.7">Thế = người hỏi · Ứng = đối phương/việc · Nhật thần ${q.dayGC || '—'} · Nguyệt kiến ${q.monGC || '—'} · Tuần không: ${q.khong.join(', ') || '—'}</p></div>`;
+      /* phân tích */
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">PHÂN TÍCH</h3>`;
+      h += `<div class="zw-li">${escapeHtml(L.banQue)}</div>`;
+      L.luan.forEach(l => { h += `<div class="zw-li">${escapeHtml(l)}</div>`; });
+      h += `</div>`;
+      /* 4 nhóm kết luận */
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">KẾT LUẬN VÀ DIỄN BIẾN</h3>`;
+      if (L.thuanLoi.length) { h += `<div class="zw-act"><b class="zw-act-lb">THUẬN LỢI</b><span>${escapeHtml(L.thuanLoi.join(' · '))}</span></div>`; }
+      if (L.troNgai.length) { h += `<div class="zw-act zw-avoid"><b class="zw-act-lb">TRỞ NGẠI</b><span>${escapeHtml(L.troNgai.join(' · '))}</span></div>`; }
+      if (L.chuaRo.length) { h += `<div class="zw-li">⚠ ${escapeHtml(L.chuaRo.join(' · '))}</div>`; }
+      h += `<p class="zw-p" style="font-size:11px;opacity:.75;margin-top:8px">Quẻ Dịch luận theo pháp Lục Hào cổ truyền — tham khảo hướng xử sự, không phải dự đoán chắc chắn.</p></div>`;
       return h;
     }
     function renderZwHan(c) {

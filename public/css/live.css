@@ -3195,3 +3195,22 @@ html.need-name .name-gate-overlay {
 .zw-rep-tbl td:first-child { font-weight: 700; color: #8b1a1a; width: 34%; background: #faf5e6; }
 .zw-rep .zw-hdr2 { font-size: 12px; letter-spacing: 2px; color: #8b1a1a; font-weight: 700; margin: 10px 0 5px; }
 @media (max-width: 700px) { .zw-rep-h1 { font-size: 22px; } .zw-rep-2col { grid-template-columns: 1fr; } .zw-rep-daiitem { flex: 1 1 45%; } }
+
+/* ============ GIEO QUẺ — Lục Hào Nạp Giáp ============ */
+.que-2hex { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 10px 0 14px; }
+.que-hex { text-align: center; min-width: 130px; }
+.que-sym { display: block; font-size: 54px; line-height: 1; color: #8b1a1a; margin-bottom: 4px; font-family: serif; }
+.que-hex b { display: block; font-size: 16px; color: #2a2018; font-family: Georgia, serif; }
+.que-hex i { font-size: 11px; color: #7a6a4a; font-style: normal; }
+.que-arrow { font-size: 26px; color: #b8860b; font-weight: 700; }
+.que-verdict { background: linear-gradient(180deg, #1a1208, #2b1d0e); color: #ffe9b0; border: 1px solid rgba(255,200,100,.3);
+  border-radius: 10px; padding: 12px 16px; font-size: 14.5px; line-height: 1.6; margin-top: 8px; font-family: Georgia, serif; }
+.que-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.que-tbl th { background: #f3ead3; color: #8b1a1a; font-size: 11px; letter-spacing: 1px; padding: 6px 8px; border: 1px solid #dcc9a0; }
+.que-tbl td { border: 1px solid #e0d0ae; padding: 6px 8px; text-align: center; color: #2a2018; }
+.que-tbl td i { color: #7a6a4a; font-style: normal; }
+.que-dong td { background: #fdeaea; }
+.que-line { font-size: 18px; color: #8b1a1a; }
+.que-the { color: #b8860b; }
+.que-ung { color: #1a56a0; }
+.que-khong { color: #c00; }
