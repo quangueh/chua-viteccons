@@ -2551,9 +2551,10 @@ import { makeDevotee } from './chars3d.js';
         `<div style="margin:14px auto 0;max-width:520px;text-align:left">` +
         `<input id="queQ" class="zen-input" style="width:100%;margin-bottom:8px" placeholder="Câu hỏi của thí chủ (vd: việc làm sắp tới ra sao?)" value="${escapeHtml(queData ? queData.question : '')}">` +
         `<select id="queCat" class="zen-sel" style="width:100%;margin-bottom:10px">${CATS.map(c => `<option value="${c[0]}"${queData && queData.category === c[0] ? ' selected' : ''}>${c[1]}</option>`).join('')}</select>` +
-        `<button class="zen-btn" id="btnQueCast" style="width:100%">🪙 Gieo quẻ (3 đồng xu × 6 lần)</button></div></div>`;
+        `<button class="zen-btn" id="btnQueCast" style="width:100%">🪙 Gieo quẻ (3 đồng xu × 6 lần)</button>` +
+        `<div id="queCastStage"></div></div></div>`;
       if (queData) h += renderQueResult(queData);
-      else h += `<p class="zw-p" style="text-align:center;opacity:.7">Thành tâm nghĩ câu hỏi, rồi gieo. Mỗi lần gieo 3 đồng xu — 6 lần thành 6 hào từ dưới lên.</p>`;
+      else h += `<p class="zw-p" style="text-align:center;opacity:.7">Thành tâm nghĩ câu hỏi, rồi gieo. Mỗi lần gieo 3 đồng xu — 6 lần thành 6 hào từ dưới lên.<br><span style="font-size:10px">Engine theo pháp Kinh Dịch/Lục Hào cổ truyền — tham chiếu yaomancy/liuyao-engine (Bốc Thiếp Chính Tông), Coaixy/ichingshifa, ycczkl/najia-core.</span></p>`;
       h += `</div>`;
       setTimeout(() => {
         const btn = document.getElementById('btnQueCast');
@@ -2561,8 +2562,30 @@ import { makeDevotee } from './chars3d.js';
           const q = (document.getElementById('queQ').value || '').trim() || 'việc quan tâm hiện tại';
           const cat = document.getElementById('queCat').value;
           const birth = (() => { try { return JSON.parse(localStorage.getItem('chua_vt_birth') || '{}'); } catch (e) { return {}; } })();
-          queData = window.Ich.cast(q, cat, birth.g || '');
-          renderZen('que');
+          btn.disabled = true;
+          /* tính quẻ ngay nhưng giải từng hào một — nghi thức lắc xu */
+          const hao = []; for (let k = 0; k < 6; k++) hao.push(window.Ich ? (function () { let s = 0; for (let m = 0; m < 3; m++) s += Math.random() < 0.5 ? 3 : 2; return s; })() : 7);
+          const stage = document.getElementById('queCastStage');
+          const HAO_LB = ['Hào Sơ', 'Hào Nhị', 'Hào Tam', 'Hào Tứ', 'Hào Ngũ', 'Hào Lục'];
+          const VAL_LB = { 6: 'Lão Âm ✕ động', 7: 'Thiếu Dương', 8: 'Thiếu Âm', 9: 'Lão Dương ○ động' };
+          stage.innerHTML = '<div class="que-casting"><div class="que-coins"><span class="que-coin">🪙</span><span class="que-coin">🪙</span><span class="que-coin">🪙</span></div><div class="que-cline" id="queCLb"></div><div class="que-stack" id="queStack"></div></div>';
+          const lb = document.getElementById('queCLb'), stack = document.getElementById('queStack');
+          let i = 0;
+          const step = () => {
+            if (i >= 6) { queData = window.Ich.build(hao, q, cat, birth.g || ''); renderZen('que'); return; }
+            lb.textContent = HAO_LB[i] + ' — đang lắc...';
+            const coins = stage.querySelectorAll('.que-coin');
+            coins.forEach(c => c.classList.add('shake'));
+            setTimeout(() => {
+              coins.forEach(c => c.classList.remove('shake'));
+              lb.textContent = HAO_LB[i] + ': ' + VAL_LB[hao[i]] + ' (' + hao[i] + ')';
+              const yang = hao[i] === 7 || hao[i] === 9;
+              const dong = hao[i] === 6 || hao[i] === 9;
+              stack.insertAdjacentHTML('afterbegin', `<div class="que-hline ${dong ? 'hdong' : ''}">${yang ? '⚊' : '⚋'} ${dong ? '<i>động</i>' : ''}</div>`);
+              i++; setTimeout(step, 700);
+            }, 900);
+          };
+          step();
         };
       }, 0);
       return h;
@@ -2579,11 +2602,11 @@ import { makeDevotee } from './chars3d.js';
       h += `</div>`;
       h += `<div class="que-verdict">${escapeHtml(L.ketLuan)}</div></div>`;
       /* bàn quẻ lục hào — hào 6 trên, hào 1 dưới */
-      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">BÀN LỤC HÀO</h3><table class="que-tbl"><tr><th>Hào</th><th>Quẻ</th><th>Lục Thân</th><th>Nạp Giáp</th><th>Động</th><th>Vị trí</th><th>Nhật/Nguyệt</th></tr>`;
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">BÀN LỤC HÀO</h3><table class="que-tbl"><tr><th>Hào</th><th>Quẻ</th><th>Lục Thần</th><th>Lục Thân</th><th>Nạp Giáp</th><th>Động</th><th>Vị trí</th><th>Nhật/Nguyệt</th></tr>`;
       for (let i = 5; i >= 0; i--) {
         const r = q.rows[i];
         h += `<tr class="${r.dong ? 'que-dong' : ''}"><td>${['Sơ', 'Nhị', 'Tam', 'Tứ', 'Ngũ', 'Lục'][i]}</td>` +
-          `<td class="que-line">${r.yang ? '⚊' : '⚋'}</td><td><b>${r.lt}</b></td><td>${r.najia} <i>(${r.el})</i></td>` +
+          `<td class="que-line">${r.yang ? '⚊' : '⚋'}</td><td>${r.lucThan6 || '—'}</td><td><b>${r.lt}</b></td><td>${r.najia} <i>(${r.el})</i></td>` +
           `<td>${r.dong ? '✕ ĐỘNG' : '—'}</td><td>${r.isThe ? '<b class="que-the">THẾ</b>' : r.isUng ? '<b class="que-ung">ỨNG</b>' : ''}</td>` +
           `<td>${[r.vsDay ? 'Nhật ' + r.vsDay : '', r.vsMonth ? 'Nguyệt ' + r.vsMonth : '', r.khong ? '<b class="que-khong">Không</b>' : ''].filter(Boolean).join(' · ') || '—'}</td></tr>`;
       }

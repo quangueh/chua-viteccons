@@ -3214,3 +3214,23 @@ html.need-name .name-gate-overlay {
 .que-the { color: #b8860b; }
 .que-ung { color: #1a56a0; }
 .que-khong { color: #c00; }
+
+/* Gieo quẻ — animation lắc xu */
+.que-casting { text-align: center; padding: 14px 0 4px; }
+.que-coins { font-size: 34px; letter-spacing: 6px; margin-bottom: 6px; }
+.que-coin { display: inline-block; transition: transform .3s; }
+.que-coin.shake { animation: coinShake .9s ease-in-out; }
+@keyframes coinShake {
+  0% { transform: rotate(0) translateY(0) scale(1); }
+  20% { transform: rotate(140deg) translateY(-16px) scale(1.1); }
+  40% { transform: rotate(300deg) translateY(4px) scale(.95); }
+  60% { transform: rotate(430deg) translateY(-10px); }
+  80% { transform: rotate(560deg) translateY(2px); }
+  100% { transform: rotate(720deg) translateY(0) scale(1); }
+}
+.que-cline { font-size: 13px; font-weight: 700; color: #8b1a1a; margin: 6px 0; min-height: 20px; }
+.que-stack { display: flex; flex-direction: column; align-items: center; gap: 3px; margin-top: 6px; }
+.que-hline { font-size: 24px; color: #2a2018; line-height: 1; animation: hlineIn .5s ease; }
+.que-hline.hdong { color: #c00; }
+.que-hline i { font-size: 10px; font-style: normal; color: #c00; vertical-align: middle; }
+@keyframes hlineIn { from { opacity: 0; transform: translateY(10px) scale(.7); } to { opacity: 1; transform: none; } }

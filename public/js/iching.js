@@ -202,21 +202,24 @@
     }
 
     /* nhật thần + nguyệt kiến từ fortune.js nếu có */
-    var F = window.F;
-    var dayGC = F && F.dayGanzhi ? F.dayGanzhi(new Date()) : null;
-    var monGC = F && F.monthGanzhi ? F.monthGanzhi(new Date()) : null;
-    var khong = dayGC ? tuanKhong({ c: CAN.indexOf(dayGC.can || dayGC.split(' ')[0]), z: CHI.indexOf(dayGC.zhi || (dayGC.split(' ')[1] || '')) }) : [];
-    /* dayGC trong fortune.js trả "Can Chi" string chuỗi */
-    if (typeof dayGC === 'string') {
-      var dc = dayGC.split(' ');
-      khong = tuanKhong({ c: CAN.indexOf(dc[0]), z: CHI.indexOf(dc[1]) });
-    }
+    var F = window.F || window.ChuaFortune, now = new Date();
+    var dayObj = F && F.dayGanzhi ? F.dayGanzhi(now.getFullYear(), now.getMonth() + 1, now.getDate()) : null;
+    var monObj = F && F.monthGanzhi ? F.monthGanzhi(now.getFullYear(), now.getMonth() + 1, now.getDate()) : null;
+    var dayGC = dayObj ? CAN[dayObj.stem] + ' ' + CHI[dayObj.branch] : '';
+    var monGC = monObj ? CAN[monObj.stem] + ' ' + CHI[monObj.branch] : '';
+    var khong = dayObj ? tuanKhong({ c: dayObj.stem, z: dayObj.branch }) : [];
 
     rows.forEach(function (r) {
       r.khong = khong.indexOf(r.zi) >= 0;
-      if (monGC && typeof monGC === 'string') r.vsMonth = relChi(r.zi, CHI.indexOf(monGC.split(' ')[1]));
-      if (typeof dayGC === 'string') r.vsDay = relChi(r.zi, CHI.indexOf(dayGC.split(' ')[1]));
+      if (monObj) r.vsMonth = relChi(r.zi, monObj.branch);
+      if (dayObj) r.vsDay = relChi(r.zi, dayObj.branch);
     });
+    /* Lục Thần theo nhật can (tham chiếu najia-core) */
+    var LUC_THAN = ['Thanh Long', 'Chu Tước', 'Câu Trần', 'Đằng Xà', 'Bạch Hổ', 'Huyền Vũ'];
+    var LT_START = { 0: 0, 1: 0, 2: 1, 3: 1, 4: 2, 5: 3, 6: 4, 7: 4, 8: 5, 9: 5 };
+    if (dayObj) {
+      rows.forEach(function (r, k) { r.lucThan6 = LUC_THAN[(LT_START[dayObj.stem] + k) % 6]; });
+    }
 
     /* dụng thần theo chủ đề */
     var catLt = { 'tai': 'Thê Tài', 'quan': 'Quan Quỷ', 'con': 'Tử Tôn', 'cha': 'Phụ Mẫu', 'ban': 'Huynh Đệ' };
