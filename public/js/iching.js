@@ -243,104 +243,104 @@
     };
   };
 
-  /* -------- luận giải: kết luận trước, phân tích sau -------- */
+  /* -------- luận giải: đời thường trước, chuyên môn sau -------- */
   var CAT_NAME = {
     'duyen': 'Tình duyên / Hôn nhân', 'tai': 'Tiền bạc / Tài chính', 'quan': 'Sự nghiệp / Công danh',
     'con': 'Con cái / Đời sau', 'cha': 'Gia đình / Cha mẹ / Nhà cửa', 'ban': 'Bạn bè / Đối tác',
     'suckhoe': 'Sức khỏe / Bản thân', 'chung': 'Câu hỏi chung'
   };
-  var LT_MEAN = {
-    'Phụ Mẫu': 'cha mẹ, giấy tờ, nhà cửa, người lớn tuổi, việc cũ',
-    'Huynh Đệ': 'anh em, bạn bè, đối thủ cạnh tranh, hao tài',
-    'Tử Tôn': 'con cái, phúc tinh, giải sầu, thuốc hay, học trò',
-    'Thê Tài': 'vợ, tiền bạc, của cải, người phụ nữ',
-    'Quan Quỷ': 'chồng, quan lộc, thị phi, bệnh tật, áp lực'
+  /* giải thích lục thân bằng lời đời */
+  var LT_PLAIN = {
+    'Phụ Mẫu': 'đứng cho cha mẹ, người lớn, giấy tờ, nhà cửa, việc đã có sẵn',
+    'Huynh Đệ': 'đứng cho anh em, bạn bè — và cả đối thủ, người chia tiền của bạn',
+    'Tử Tôn': 'đứng cho con cái, niềm vui — là sao phúc, cứu nguy, giải sầu',
+    'Thê Tài': 'đứng cho tiền bạc, của cải — nam hỏi duyên thì là người phụ nữ',
+    'Quan Quỷ': 'đứng cho quan chức, áp lực, phiền muộn, bệnh tật — nữ hỏi duyên thì là người đàn ông'
   };
-  var LT_MEAN_REL = {
-    'Phụ Mẫu': 'người lớn che chở, giấy tờ hôn thú, gia đình hai bên',
-    'Huynh Đệ': 'đối thủ tình duyên, người thứ ba, người ngang hàng',
-    'Tử Tôn': 'sự vui vẻ, con cháu, hậu quả tình cảm',
-    'Thê Tài': 'người vợ/người yêu (nếu nam hỏi), vật chất trong hôn nhân',
-    'Quan Quỷ': 'người chồng/người đàn ông (nếu nữ hỏi), phiền muộn trong tình'
+  /* lời khuyên theo chủ đề + quẻ thuận/khó */
+  var CAT_TIP = {
+    'duyen': { thuan: 'Duyên có căn — có thể chủ động tiến tới, hỏi han, tìm hiểu đối phương. Nhưng xem kỹ hào Ứng (đối phương): ứng tĩnh vượng thì người ấy ổn định thật lòng.', kho: 'Duyên chưa đến lúc — đừng ép, đừng níu. Quan Quỷ/Huynh Đệ động thường là có người xen vào hoặc hiểu lầm; giữ khoảng cách, chờ quẻ biến.', giua: 'Duyên đan xen — có tín hiệu tốt nhưng chưa đủ. Để tự nhiên phát triển, đừng vội cam kết, xem biến quẻ chỉ hướng cuối cùng.' },
+    'tai': { thuan: 'Tài vận tốt — Thê Tài vượng thì tiền có căn đến. Tiến hành việc tài chính đang tính, nhưng coi chừng Huynh Đệ động là người chia hao.', kho: 'Tài vận yếu — Thê Tài suy/không thì đừng đầu tư lớn, đừng cho vay, đừng ký hợp đồng tiền lúc này. Chờ thời vận chuyển.', giua: 'Tiền khó đoán — thuận trở đan xen. Chia nhỏ quyết định, giữ tiền mặt, đừng dồn hết một chỗ.' },
+    'quan': { thuan: 'Quan lộc vượng — có cửa thăng tiến/thi đậu/được trọng dụng. Quan Quỷ ở đây là việc làm, chức vụ — vượng là tốt, đừng sợ tên "quỷ".', kho: 'Quan lộc suy — việc nghề đang chững, đừng xin chuyển/đổi việc lúc này. Quan Quỷ lâm không là chức vụ hão, hứa hẹn không thực.', giua: 'Việc có biến chuyển — cơ hội nhưng phải chờ thời. Chuẩn bị sẵn hồ sơ/năng lực, đợi quẻ ứng vào tháng vượng.' },
+    'con': { thuan: 'Tử Tôn vượng — đường con cái tốt, sinh nở thuận, con cái khỏe ngoan. Cũng là sao phúc giải phiền.', kho: 'Tử Tôn suy — việc con cái cần chờ, đừng ép; có thể muộn con hoặc con cái hay đau. Tu phước thêm.', giua: 'Bình thường — theo tự nhiên.' },
+    'cha': { thuan: 'Phụ Mẫu vượng — được người lớn che chở, giấy tờ nhà cửa thuận, có quý nhân tuổi tác.', kho: 'Phụ Mẫu suy — việc giấy tờ/nhà cửa hay cha mẹ khó khăn; cẩn thận thủ tục pháp lý, chăm sức khỏe người già.', giua: 'Bình thường.' },
+    'ban': { thuan: 'Huynh Đệ vượng — bạn bè đối tác tin cậy, hợp tác có lợi.', kho: 'Huynh Đệ là sao hao tài — hợp tác dễ tranh lợi, chia tiền không đều; đừng góp vốn vội, ký rõ giấy tờ.', giua: 'Hợp tác bình thường — làm rõ quyền lợi trước.' },
+    'suckhoe': { thuan: 'Thế hào vững — sức khỏe căn bản tốt. Quan Quỷ động mới là bệnh phát — hiện ổn.', kho: 'Sức khỏe cần chú ý — Quan Quỷ vượng/động là bệnh khí mạnh; đi khám thật, đừng chỉ dựa quẻ.', giua: 'Bình thường — giữ sinh hoạt điều độ.' },
+    'chung': { thuan: 'Việc hỏi có căn thực — thế ứng hòa hợp, tiến hành được.', kho: 'Việc hỏi gặp trở ngại — chậm lại, xem xét kỹ, đừng quyết gấp.', giua: 'Thuận trở đan xen — làm mà giữ mình.' }
   };
 
   ICHING.luan = function (q) {
-    var L = { ketLuan: '', thuanLoi: [], troNgai: [], chuaRo: [], banQue: '', luan: [] };
-
-    /* --- bản quẻ --- */
-    L.banQue = 'Bản quẻ ' + q.benName + ' (thượng ' + q.upper.name + ' ' + TRI_IMG[q.upper.name] + ' / hạ ' + q.lower.name + ' ' + TRI_IMG[q.lower.name] + '). Thuộc cung ' + q.cung.name + ' hành ' + q.cungEl + ' — ' + q.genName + ', thế hào ' + q.theHao + ', ứng hào ' + q.ungHao + '. ' + q.benY + '.';
-    if (q.dongHao.length) L.banQue += ' Có ' + q.dongHao.length + ' hào động (' + q.dongHao.join(', ') + ') biến thành quẻ ' + q.bienName + ' — ' + q.bienY + '.';
-    else L.banQue += ' Sáu hào tĩnh — việc ổn định, ít biến động.';
-
-    /* --- dụng thần / thế ứng --- */
+    var L = { ketLuan: '', story: '', topics: [], advice: [], tech: [], thuanLoi: [], troNgai: [], chuaRo: [] };
     var cat = q.category;
+
+    /* 1. CÂU CHUYỆN QUẺ — giải thích bản quẻ bằng lời đời */
+    L.story = 'Quẻ ' + q.benName + ' gồm quái ' + q.upper.name + ' (' + TRI_IMG[q.upper.name] + ') trên, quái ' + q.lower.name + ' (' + TRI_IMG[q.lower.name] + ') dưới. ' + q.benY + '.';
+    if (q.dongHao.length) L.story += ' Có ' + q.dongHao.length + ' hào đang động (hào ' + q.dongHao.join(', ') + ') — việc đang chuyển biến, sẽ trở thành quẻ ' + q.bienName + ' (' + q.bienY + ').';
+    else L.story += ' Sáu hào đều tĩnh — việc hiện ổn định, ít thay đổi bất ngờ.';
+
+    /* 2. BẢN THÂN (THẾ) vs ĐỐI PHƯƠNG/VIỆC (ỨNG) — nói dễ hiểu */
+    var the = q.rows[q.theHao - 1], ung = q.rows[q.ungHao - 1];
+    var rel = relChi(the.zi, ung.zi);
+    var relPlain = {
+      'đồng khí': 'hai bên cùng phe cùng ý', 'lục hợp': 'hai bên rất hợp nhau, dễ thành đôi/thành việc',
+      'tam hợp': 'hai bên hợp nhau', 'được sinh': 'đối phương/việc đang nâng đỡ bạn',
+      'sinh người': 'bạn phải bỏ ra cho đối phương/việc', 'bị khắc': 'đối phương/việc đang áp chế bạn',
+      'khắc người': 'bạn chi phối được đối phương/việc', 'lục xung': 'hai bên khác ý, dễ xung đột chia rẽ',
+      'bình': 'hai bên bình thường, không ai áp ai'
+    };
+    L.topics.push(['Bạn và đối phương/việc', 'Hào Thế (bạn) là ' + the.lt + ' ' + the.najia + (the.dong ? ' đang động — bạn đang chủ động thay đổi' : ' đứng yên — bạn đang giữ nguyên') + '. Hào Ứng (đối phương/việc) là ' + ung.lt + ' ' + ung.najia + (ung.dong ? ' đang động — phía kia đang biến' : '') + '. Hai hào ' + rel + ' — ' + relPlain[rel] + '.' + (the.khong ? ' ⚠ Thế lâm Tuần Không — bạn đang lưỡng lự, chưa vững ý.' : '') + (ung.khong ? ' ⚠ Ứng lâm Tuần Không — đối phương/việc chưa chắc thực, đừng tin hết lời hứa.' : '')]);
+
+    /* 3. VIỆC CHÍNH — dụng thần */
     if (q.dungLt && q.dungRows.length) {
       var d = q.dungRows[0];
-      var v = [];
-      v.push('Dụng thần ' + q.dungLt + ' tại hào ' + d.pos + ' (' + d.najia + ', hành ' + d.el + ')');
-      v.push(d.dong ? 'động — có biến chuyển đang xảy ra' : 'tĩnh');
-      if (d.vsMonth) v.push('đối nguyệt kiến ' + q.monGC + ': ' + d.vsMonth);
-      if (d.vsDay) v.push('đối nhật thần ' + q.dayGC + ': ' + d.vsDay);
-      if (d.khong) v.push('lâm Tuần Không — lực lượng giảm, việc chưa thực');
-      var strong = (d.vsMonth === 'được sinh' || d.vsMonth === 'đồng khí' || d.vsMonth === 'lục hợp' || d.vsMonth === 'tam hợp' || d.vsDay === 'được sinh' || d.vsDay === 'đồng khí');
-      var weak = (d.vsMonth === 'bị khắc' || d.vsDay === 'bị khắc' || d.khong);
-      L.luan.push('⭐ ' + v.join(' · ') + ' → ' + (strong ? 'dụng thần VƯỢNG, việc hỏi có căn thực, dễ thành' : weak ? 'dụng thần SUY/KHÔNG, việc hỏi khó, cần thời' : 'dụng thần trung bình — việc còn phụ thuộc diễn biến'));
-      if (strong) L.thuanLoi.push('dụng thần vượng tại ' + d.najia);
-      if (weak) L.troNgai.push('dụng thần suy' + (d.khong ? ' và lâm không' : ''));
-      if (d.dong) L.luan.push('  → Hào dụng thần động biến thành hào ' + relChi(d.zi, -1));
+      var vuong = (d.vsMonth === 'được sinh' || d.vsMonth === 'đồng khí' || d.vsMonth === 'lục hợp' || d.vsMonth === 'tam hợp' || d.vsDay === 'được sinh' || d.vsDay === 'đồng khí');
+      var suy = (d.vsMonth === 'bị khắc' || d.vsDay === 'bị khắc' || d.khong);
+      var stt = vuong ? 'VƯỢNG — có sức thực, việc dễ thành' : suy ? 'SUY — lực yếu, việc khó/chưa đến lúc' : 'TRUNG — việc còn phụ thuộc diễn biến';
+      L.topics.push(['Việc ' + CAT_NAME[cat].toLowerCase() + ' (dụng thần ' + q.dungLt + ')', q.dungLt + ' ' + LT_PLAIN[q.dungLt] + '. Trong quẻ này nó nằm hào ' + d.pos + ' (' + d.najia + ')' + (d.dong ? ', đang động — việc đang xoay chuyển' : '') + '. Đối chiếu ngày tháng hiện tại thì sao này ' + stt + '.' + (d.khong ? ' Hào lâm Tuần Không — việc hão/chưa thực, thành mà như không.' : '')]);
+      if (vuong) L.thuanLoi.push('sao chính (' + q.dungLt + ') có lực trong tháng/ngày này');
+      if (suy) L.troNgai.push('sao chính (' + q.dungLt + ') yếu lực' + (d.khong ? ' và lâm hão không' : ''));
     } else if (q.dungLt) {
-      L.chuaRo.push('Dụng thần ' + q.dungLt + ' không hiện trên bản quẻ — phải xem phục thần/ứng hào; kết luận chỉ sơ bộ');
-      L.luan.push('⚠ Quẻ không có hào ' + q.dungLt + ' — việc ' + CAT_NAME[cat].toLowerCase() + ' mờ, cần xem thêm thế/ứng và phục thần bên dưới.');
+      L.topics.push(['Việc ' + CAT_NAME[cat].toLowerCase(), 'Quẻ không có hào ' + q.dungLt + ' (' + LT_PLAIN[q.dungLt] + ') hiện lên — tức chủ đề này hiện MỜ, chưa hiện rõ trong số phận lúc này. Chờ thêm hoặc xem lại sau.']);
+      L.chuaRo.push('sao chính không hiện trên quẻ');
     }
 
-    /* thế - ứng */
-    var the = q.rows[q.theHao - 1], ung = q.rows[q.ungHao - 1];
-    var theUngRel = relChi(the.zi, ung.zi);
-    L.luan.push('◆ Thế (bạn) hào ' + q.theHao + ' ' + the.najia + ' ' + the.lt + ' · Ứng (đối phương/việc) hào ' + q.ungHao + ' ' + ung.najia + ' ' + ung.lt + ' — hai hào ' + theUngRel);
-    if (theUngRel === 'lục hợp' || theUngRel === 'tam hợp' || theUngRel === 'được sinh') L.thuanLoi.push('thế ứng ' + theUngRel + ' — hai bên tương hợp');
-    if (theUngRel === 'lục xung' || theUngRel === 'bị khắc') L.troNgai.push('thế ứng ' + theUngRel + ' — hai bên khác ý, dễ xung đột');
-    if (the.khong) L.troNgai.push('thế hào lâm Tuần Không — bản thân lưỡng lự/chưa vững');
-    if (ung.khong) L.troNgai.push('ứng hào lâm Tuần Không — đối phương/việc chưa chắc thực');
-    if (the.dong) L.luan.push('  → Thế hào động — bạn đang thay đổi, chủ động trong việc này');
-    if (ung.dong) L.luan.push('  → Ứng hào động — đối phương/hoàn cảnh đang biến động');
-
-    /* hào động + quan quỷ động cảnh báo */
+    /* 4. CÁC HÀO ĐỘNG — sự kiện đang xảy ra */
     q.rows.forEach(function (r) {
       if (r.dong) {
-        var note = 'Hào ' + r.pos + ' động (' + r.lt + ' ' + r.najia + ')';
-        if (r.lt === 'Quan Quỷ' && cat !== 'quan' && cat !== 'suckhoe') { note += ' — quan quỷ động: đề phòng thị phi, phiền nhiễu trong việc hỏi'; L.troNgai.push('quan quỷ động hào ' + r.pos); }
-        if (r.lt === 'Huynh Đệ' && cat === 'tai') { note += ' — huynh đệ động khắc thê tài: hao tiền, chia lợi'; L.troNgai.push('huynh đệ động hào ' + r.pos + ' hao tài'); }
-        if (r.lt === 'Tử Tôn' && cat === 'suckhoe') { note += ' — tử tôn (phúc tinh) động: bệnh có lối thoát'; L.thuanLoi.push('tử tôn động cứu bệnh'); }
-        L.luan.push('• ' + note);
+        var warn = '';
+        if (r.lt === 'Quan Quỷ' && cat !== 'quan' && cat !== 'suckhoe') warn = ' — ⚠ sao phiền muộn/thị phi động: đề phòng rắc rối, cãi cọ, người xen vào';
+        if (r.lt === 'Huynh Đệ' && cat === 'tai') warn = ' — ⚠ sao hao tài động: dễ mất tiền, bị chia lợi, đừng cho vay';
+        if (r.lt === 'Tử Tôn') warn = ' — sao phúc động: phiền muộn được giải, có người/việc giúp bạn';
+        if (r.lt === 'Thê Tài' && cat === 'duyen') warn = ' — sao tình duyên/tiền động: duyên đang chuyển';
+        L.topics.push(['Hào ' + r.pos + ' đang động', 'Hào ' + r.pos + ' (' + r.lt + ' ' + LT_PLAIN[r.lt] + ') đang động' + warn + '.']);
+        if (warn.indexOf('⚠') >= 0) L.troNgai.push(r.lt + ' động hào ' + r.pos);
+        if (r.lt === 'Tử Tôn') L.thuanLoi.push('sao phúc (Tử Tôn) động cứu nguy');
       }
     });
 
-    /* sinh khắc dụng thần từ các hào khác */
-    if (q.dungRows.length) {
-      var dz = q.dungRows[0].zi;
-      q.rows.forEach(function (r) {
-        if (r === q.dungRows[0]) return;
-        var rel = relChi(dz, r.zi);
-        if (rel === 'bị khắc' && r.dong) L.troNgai.push('hào ' + r.pos + ' (' + r.lt + ') động khắc dụng thần');
-        if (rel === 'được sinh' && r.dong) L.thuanLoi.push('hào ' + r.pos + ' (' + r.lt + ') động sinh dụng thần');
-      });
-    }
+    /* 5. HƯỚNG BIẾN */
+    if (q.dongHao.length) L.topics.push(['Xu hướng tương lai', 'Việc sẽ chuyển thành quẻ ' + q.bienName + ': ' + q.bienY + '.']);
 
-    /* --- kết luận --- */
+    /* 6. KẾT LUẬN + LỜI KHUYÊN */
     var t = L.thuanLoi.length, tr = L.troNgai.length;
-    var quaTinh = q.dongHao.length === 0 ? 'quẻ tĩnh — việc ổn định' : 'quẻ có ' + q.dongHao.length + ' hào động — đang biến chuyển';
-    L.ketLuan = q.benName + (q.dongHao.length ? ' biến ' + q.bienName : '') + ' — ' + quaTinh + '. ' +
-      (t > tr * 2 ? 'Việc hỏi THUẬN — căn quẻ tốt, nên tiến hành.' :
-        tr > t ? 'Việc hỏi KHÓ — trở ngại nhiều, nên chậm chờ đợi.' :
-          'Việc hỏi VỪA — thuận trở đan xen, làm mà giữ mình.') +
-      ' ' + (q.bienName && q.dongHao.length ? 'Hướng biến sang ' + q.bienName + ' — ' + q.bienY.split('—')[0].trim().toLowerCase() + '.' : '');
-
-    /* diễn biến theo biến quẻ */
-    if (q.dongHao.length) {
-      L.luan.push('◆ Diễn biến → ' + q.bienName + ': ' + q.bienY);
-    }
+    var trang = t > tr * 2 ? 'thuan' : tr > t ? 'kho' : 'giua';
+    var trangTxt = { thuan: 'THUẬN', kho: 'KHÓ', giua: 'VỪA' }[trang];
+    L.ketLuan = 'Kết quả: ' + trangTxt + ' — ' + q.benName + (q.dongHao.length ? ' biến ' + q.bienName : ' (tĩnh)') + '. ' + CAT_TIP[cat][trang];
+    L.advice = [CAT_TIP[cat][trang]];
+    /* thêm lời khuyên theo trở ngại cụ thể */
+    if (L.troNgai.length) L.advice.push('Cẩn thận: ' + L.troNgai.join('; ') + '.');
+    if (ung.khong) L.advice.push('Đối phương/việc chưa chắc thực — đừng ký giấy, đừng đưa tiền, đừng tin lời hứa lúc này.');
+    if (the.khong) L.advice.push('Bạn đang lưỡng lự — giữ mình, đợi quyết tâm vững rồi hẵng làm.');
+    /* chuyên môn (xếp cuối) */
+    L.tech = [
+      'Bản quẻ ' + q.benName + ' thuộc cung ' + q.cung.name + ' hành ' + q.cungEl + ' — ' + q.genName,
+      'Thế hào ' + q.theHao + ' · Ứng hào ' + q.ungHao,
+      'Nhật thần ' + (q.dayGC || '—') + ' · Nguyệt kiến ' + (q.monGC || '—') + ' · Tuần không ' + (q.khong.join(', ') || '—')
+    ];
     return L;
   };
+
+  /* hình quẻ unicode theo upper/lower */
 
   /* hình quẻ unicode theo upper/lower */
   var HEX_SYM = '䷀䷁䷂䷃䷄䷅䷆䷇䷈䷉䷊䷋䷌䷍䷎䷏䷐䷑䷒䷓䷔䷕䷖䷗䷘䷙䷚䷛䷜䷝䷞䷟䷠䷡䷢䷣䷤䷥䷦䷧䷨䷩䷪䷫䷬䷭䷮䷯䷰䷱䷲䷳䷴䷵䷶䷷䷸䷹䷺䷻䷼䷽䷾䷿';

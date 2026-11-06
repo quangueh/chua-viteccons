@@ -2609,8 +2609,23 @@ import { makeDevotee } from './chars3d.js';
       else h += `<div class="que-arrow">·</div><div class="que-hex"><span class="que-sym">靜</span><b>Sáu hào tĩnh</b><i>việc ổn định ít biến</i></div>`;
       h += `</div>`;
       h += `<div class="que-verdict">${escapeHtml(L.ketLuan)}</div></div>`;
-      /* bàn quẻ lục hào — hào 6 trên, hào 1 dưới */
-      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">BÀN LỤC HÀO</h3><table class="que-tbl"><tr><th>Hào</th><th>Quẻ</th><th>Lục Thần</th><th>Lục Thân</th><th>Nạp Giáp</th><th>Động</th><th>Vị trí</th><th>Nhật/Nguyệt</th></tr>`;
+      /* câu chuyện quẻ — giải thích đời thường */
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">QUẺ MUỐN NÓI GÌ</h3><p class="zw-p" style="font-size:14.5px;line-height:1.7">${escapeHtml(L.story)}</p></div>`;
+      /* từng khía cạnh — chủ đề rõ ràng */
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">TỪNG KHÍA CẠNH</h3>`;
+      L.topics.forEach((tp) => {
+        h += `<div class="que-topic"><b>${escapeHtml(tp[0])}</b><p>${escapeHtml(tp[1])}</p></div>`;
+      });
+      h += `</div>`;
+      /* lời khuyên hành động */
+      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">NÊN LÀM / TRÁNH</h3>`;
+      L.advice.forEach((a) => { h += `<div class="zw-go">→ ${escapeHtml(a)}</div>`; });
+      if (L.thuanLoi.length) h += `<div class="zw-act"><b class="zw-act-lb">THUẬN LỢI</b><span>${escapeHtml(L.thuanLoi.join(' · '))}</span></div>`;
+      if (L.troNgai.length) h += `<div class="zw-act zw-avoid"><b class="zw-act-lb">TRỞ NGẠI</b><span>${escapeHtml(L.troNgai.join(' · '))}</span></div>`;
+      if (L.chuaRo.length) h += `<div class="zw-li">⚠ ${escapeHtml(L.chuaRo.join(' · '))}</div>`;
+      h += `</div>`;
+      /* bàn quẻ lục hào — chuyên môn, thu gọn */
+      h += `<details class="zw-rep-pal"><summary><span class="zw-rep-pname">BÀN LỤC HÀO (chuyên môn)</span><span class="zw-rep-ptt">thế ứng · lục thân · lục thần · nạp giáp · tuần không</span></summary><div class="zw-rep-pbody"><table class="que-tbl"><tr><th>Hào</th><th>Quẻ</th><th>Lục Thần</th><th>Lục Thân</th><th>Nạp Giáp</th><th>Động</th><th>Vị trí</th><th>Nhật/Nguyệt</th></tr>`;
       for (let i = 5; i >= 0; i--) {
         const r = q.rows[i];
         h += `<tr class="${r.dong ? 'que-dong' : ''}"><td>${['Sơ', 'Nhị', 'Tam', 'Tứ', 'Ngũ', 'Lục'][i]}</td>` +
@@ -2618,18 +2633,8 @@ import { makeDevotee } from './chars3d.js';
           `<td>${r.dong ? '✕ ĐỘNG' : '—'}</td><td>${r.isThe ? '<b class="que-the">THẾ</b>' : r.isUng ? '<b class="que-ung">ỨNG</b>' : ''}</td>` +
           `<td>${[r.vsDay ? 'Nhật ' + r.vsDay : '', r.vsMonth ? 'Nguyệt ' + r.vsMonth : '', r.khong ? '<b class="que-khong">Không</b>' : ''].filter(Boolean).join(' · ') || '—'}</td></tr>`;
       }
-      h += `</table><p class="zw-p" style="font-size:11px;opacity:.7">Thế = người hỏi · Ứng = đối phương/việc · Nhật thần ${q.dayGC || '—'} · Nguyệt kiến ${q.monGC || '—'} · Tuần không: ${q.khong.join(', ') || '—'}</p></div>`;
-      /* phân tích */
-      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">PHÂN TÍCH</h3>`;
-      h += `<div class="zw-li">${escapeHtml(L.banQue)}</div>`;
-      L.luan.forEach(l => { h += `<div class="zw-li">${escapeHtml(l)}</div>`; });
-      h += `</div>`;
-      /* 4 nhóm kết luận */
-      h += `<div class="zw-rep-chap"><h3 class="zw-rep-h2">KẾT LUẬN VÀ DIỄN BIẾN</h3>`;
-      if (L.thuanLoi.length) { h += `<div class="zw-act"><b class="zw-act-lb">THUẬN LỢI</b><span>${escapeHtml(L.thuanLoi.join(' · '))}</span></div>`; }
-      if (L.troNgai.length) { h += `<div class="zw-act zw-avoid"><b class="zw-act-lb">TRỞ NGẠI</b><span>${escapeHtml(L.troNgai.join(' · '))}</span></div>`; }
-      if (L.chuaRo.length) { h += `<div class="zw-li">⚠ ${escapeHtml(L.chuaRo.join(' · '))}</div>`; }
-      h += `<p class="zw-p" style="font-size:11px;opacity:.75;margin-top:8px">Quẻ Dịch luận theo pháp Lục Hào cổ truyền — tham khảo hướng xử sự, không phải dự đoán chắc chắn.</p></div>`;
+      h += `</table><p class="zw-p" style="font-size:11px;opacity:.7">${escapeHtml(L.tech.join(' · '))}</p></div></details>`;
+      h += `<p class="zw-p" style="font-size:11px;opacity:.75;margin-top:6px">Quẻ Dịch luận theo pháp Lục Hào cổ truyền — tham khảo hướng xử sự, không phải dự đoán chắc chắn.</p>`;
       return h;
     }
     function renderZwHan(c) {
