@@ -391,45 +391,69 @@
     chartSummary: function (chartObj) {
       if (!chartObj) return '';
       var T = window.ZiweiTexts || {};
-      var D = window.ZiweiDeep || {};
       var ZP = window.ZiweiPatterns;
       var ps = chartObj.palaces || [];
-      var ming = ps.filter(function (p) { return p.isMing; })[0];
-      var shen = ps.filter(function (p) { return p.isShen || p.isBody; })[0];
-      var majors = ming ? this.majorsOf(ming) : [];
+      var self = this;
+      var lv = { excellent: '★★★', good: '★★', neutral: '★', caution: '⚠' };
       var find = function (n) { return ps.filter(function (p) { return p.name === n; })[0]; };
-      var tai = find('Tài Bạch'), quan = find('Quan Lộc'), di = find('Thiên Di'), phu = find('Phu Thê'), tat = find('Tật Ách');
-      var lv = { excellent: 'đại cách', good: 'cách tốt', neutral: 'cách trung', caution: 'cách cần đề phòng' };
 
-      var t = '══ PHÁN ĐOÁN TỔNG LÁ SỐ ══\n';
-      t += 'Người tuổi ' + (chartObj.zodiac || '?') + ', ' + (chartObj.gender === 'female' ? 'nữ' : 'nam') + ' mạng, cục ' + (chartObj.juName || '') + (chartObj.juInfo ? ' (' + chartObj.juInfo.kw + ')' : '') + '. ';
-      t += 'Mệnh an ' + (majors.length ? majors.map(function (s) { return s.name + ' ' + (s.brightness || ''); }).join(' + ') : 'không chính tinh — mượn đối cung') + ' tại cung ' + (ming ? ming.branch : '?') + '. ';
-      if (majors.length) {
-        t += majors.map(function (s) { var st = (T.STAR_INFO || {})[s.name] || {}; var kp = (st.kw || '').split('—'); return s.name + ' là ' + (kp[0] || '').trim() + (kp[1] ? ' — ' + kp[1].trim() : ''); }).join('; ') + '. ';
-      }
-      if (shen && shen !== ming) t += 'Thân cư ' + shen.name + ' — hậu vận nặng về ' + shen.name + '.\n\n';
+      // tóm tắt 1 cung: sao + ý nghĩa theo đúng lĩnh vực cung
+      var palSum = function (p) {
+        if (!p) return '—';
+        var ms = self.majorsOf(p);
+        var dom = (T.DOMAIN || {})[p.name] || 'self';
+        if (!ms.length) {
+          var opp = ps.filter(function (x) { return x.branchIdx === (p.branchIdx + 6) % 12; })[0];
+          var om = opp ? self.majorsOf(opp) : [];
+          return 'cung không chính tinh — mượn ' + (om.length ? om.map(function (s) { return s.name; }).join('+') + ' bên ' + (opp ? opp.name : 'đối cung') : 'cung đối') + ' chiếu; phần này phải chủ động xây, trời không cho sẵn.';
+        }
+        return ms.map(function (s) {
+          var domT = ((T.STAR_DOMAIN || {})[s.name] || {})[dom] || '';
+          var short = domT ? domT.split('.')[0] : (((T.STAR_INFO || {})[s.name] || {}).kw || '').split('—')[0].trim();
+          return s.name + (s.brightness && s.brightness !== 'Bình' ? ' ' + s.brightness : '') + (s.sihua ? ' [' + s.sihua + ']' : '') + ' → ' + short;
+        }).join('\n• ');
+      };
 
-      // cách cục nổi bật toàn lá
+      var ming = find('Mệnh'), shen = ps.filter(function (p) { return p.isShen || p.isBody; })[0];
+      var tai = find('Tài Bạch'), quan = find('Quan Lộc'), phu = find('Phu Thê'), tat = find('Tật Ách'), di = find('Thiên Di');
+
+      var t = '══ BẢN MỆNH ══\n';
+      t += 'Tuổi ' + (chartObj.zodiac || '?') + ' · ' + (chartObj.gender === 'female' ? 'Nữ' : 'Nam') + ' mạng · Cục ' + (chartObj.juName || '') + (chartObj.juInfo ? ' — ' + chartObj.juInfo.kw : '') + '.\n';
+      t += '• Mệnh cung (' + (ming ? ming.branch : '?') + '): ' + palSum(ming) + '\n';
+      if (shen && shen !== ming) t += '• Thân cư ' + shen.name + ': ' + palSum(shen) + ' — về già cung này nổi rõ, hậu vận nặng về đây.\n';
+
+      t += '\n══ SỰ NGHIỆP & TIỀN BẠC ══\n';
+      t += '• Quan Lộc: ' + palSum(quan) + '\n';
+      t += '• Tài Bạch: ' + palSum(tai) + '\n';
+
+      t += '\n══ TÌNH DUYÊN & SỨC KHỎE ══\n';
+      t += '• Phu Thê: ' + palSum(phu) + '\n';
+      t += '• Tật Ách: ' + palSum(tat) + '\n';
+      if (di) t += '• Thiên Di: ' + palSum(di) + '\n';
+
+      // cách cục nổi bật với mô tả thực chất
       if (ZP && ZP.matchPalace) {
         var allPats = [];
-        ps.forEach(function (pp) { (ZP.matchPalace(pp, ps, chartObj) || []).forEach(function (x) { allPats.push(pp.name + ': ' + x.name + ' [' + (lv[x.level] || '') + ']'); }); });
-        if (allPats.length) t += 'Cách cục trên lá số (' + allPats.length + '):\n' + allPats.slice(0, 8).map(function (x) { return '◆ ' + x; }).join('\n') + '\n\n';
+        ps.forEach(function (pp) { (ZP.matchPalace(pp, ps, chartObj) || []).forEach(function (x) { allPats.push({ palace: pp.name, name: x.name, level: x.level, desc: x.desc }); }); });
+        if (allPats.length) {
+          t += '\n══ CÁCH CỤC TRÊN LÁ SỐ (' + allPats.length + ') ══\n';
+          allPats.slice(0, 6).forEach(function (x) {
+            t += '◆ ' + x.name + ' [' + (lv[x.level] || '') + '] tại ' + x.palace + '\n' + x.desc + '\n\n';
+          });
+        }
       }
 
-      // tam phương Mệnh — bộ ba sức mạnh
+      // tam phương Mệnh
       if (ming) {
         var grp = [[2, 6, 10], [8, 0, 4], [11, 3, 7], [5, 9, 1]].filter(function (g) { return g.indexOf(ming.branchIdx) >= 0; })[0] || [];
         var tam = grp.filter(function (b) { return b !== ming.branchIdx; }).map(function (b) {
           var pp = ps.filter(function (x) { return x.branchIdx === b; })[0];
-          return pp ? pp.name + ' (' + (this.majorsOf(pp).map(function (s) { return s.name; }).join('+') || 'không chính tinh') + ')' : '';
-        }, this).filter(Boolean);
-        t += 'Tam phương Mệnh: Mệnh ' + ming.branch + ' chiếu ' + tam.join(' · ') + '. ';
+          return pp ? pp.name + ' (' + (self.majorsOf(pp).map(function (s) { return s.name; }).join('+') || 'không chính tinh') + ')' : '';
+        }).filter(Boolean);
+        t += '══ TAM PHƯƠNG TỨ CHÍNH ══\nMệnh ' + ming.branch + ' được chiếu bởi ' + tam.join(' · ') + ' — đây là "sức mạnh tổng hợp" của vận mệnh, quan trọng hơn sao đơn.\n\n';
       }
-      if (tai) t += 'Tài Bạch: ' + (this.majorsOf(tai).map(function (s) { return s.name; }).join('+') || 'không chính tinh') + '. ';
-      if (quan) t += 'Quan Lộc: ' + (this.majorsOf(quan).map(function (s) { return s.name; }).join('+') || 'không chính tinh') + '. ';
-      if (phu) t += 'Phu Thê: ' + (this.majorsOf(phu).map(function (s) { return s.name; }).join('+') || 'không chính tinh') + '. ';
-      if (tat) t += 'Tật Ách: ' + (this.majorsOf(tat).map(function (s) { return s.name; }).join('+') || 'không chính tinh') + '. ';
-      t += '\n\nBấm vào từng cung để xem luận riêng chi tiết — phần Hạn Vận luận từng tháng tương lai.';
+
+      t += 'Bấm vào từng cung để luận riêng chi tiết. Tab Hạn Vận luận từng tháng tương lai.';
       return t;
     },
 
