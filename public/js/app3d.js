@@ -2123,11 +2123,18 @@ import { makeDevotee } from './chars3d.js';
     requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
 
-    // thở nhẹ cho đạo tràng (chỉ người đang ngồi)
+    // thở nhẹ + chớp mắt + đầu khẽ động cho đạo tràng (chỉ người đang ngồi)
     let bi = 0;
     for (const sc of seatChars) {
       if (sc.status !== 'seated' || !sc.devotee) continue;
-      sc.devotee.group.scale.y = 1 + Math.sin(t * 1.4 + bi++ * 0.7) * 0.008;
+      const d = sc.devotee, ph = bi++ * 1.83;
+      d.group.scale.y = 1 + Math.sin(t * 1.4 + ph) * 0.008;
+      d.head.rotation.z = Math.sin(t * 0.6 + ph) * 0.03;
+      d.head.rotation.x = Math.sin(t * 0.8 + ph * 1.3) * 0.02;
+      if (d.faceParts) { // chớp mắt mỗi ~4s, lệch pha từng người
+        const blink = (t + ph) % 4.2 > 4.05 ? 0.08 : 1;
+        for (const lid of d.faceParts.lids) lid.scale.y = blink;
+      }
     }
 
     // khói hương bốc lên + uốn lượn
